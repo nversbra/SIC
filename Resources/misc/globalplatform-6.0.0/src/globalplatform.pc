@@ -1,0 +1,11 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include/globalplatform
+
+Name: GlobalPlatform Library
+Description: GlobalPlatform Smart Card Management Library
+Version: 6.0.0
+Requires: libpcsclite >= 1.2.7
+Libs: -L${libdir} -lglobalplatform
+Cflags: -I${includedir}
