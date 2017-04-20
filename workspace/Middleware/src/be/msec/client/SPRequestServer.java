@@ -1,6 +1,9 @@
 package be.msec.client;
 
 
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -40,7 +43,10 @@ class ClientServiceThread extends Thread {
             PrintWriter out = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
             while (running) {
                 String clientCommand = in.readLine();
-                log_loc.println("Client Says :" + clientCommand);
+                //log_loc.println("Client Says :" + clientCommand);
+                JSONParser parser = new JSONParser();
+                JSONObject req = (JSONObject) parser.parse(clientCommand);
+                log_loc.println(req.toJSONString());
                 if (clientCommand.equalsIgnoreCase("quit")) {
                     running = false;
                     log_loc.print("Stopping client thread for client : " + clientID);
