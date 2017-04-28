@@ -38,7 +38,8 @@ public class IdentityCard extends Applet {
 	private byte[] nym_SN = new byte[]{0x13}; // to have something to test data saving on javacard
 	private byte[] nym_def = new byte[]{0x14}; // to have something to test data saving on javacard
 	
-	private byte[] name;
+//	instance variables
+	private byte[] name= new byte[]{0x33};
 	private byte[] address;
 	private byte[] country;
 	private byte[] birthdate;
@@ -73,28 +74,14 @@ public class IdentityCard extends Applet {
 		register();
 	}
 
-////	constructor for each SP, byte array content
-//	private IdentityCard(byte[] name;  byte[] address; byte[] country;) {
-//		/*
-//		 * During instantiation of the applet, all objects are created.
-//		 * In this example, this is the 'pin' object.
-//		 */
-//		pin = new OwnerPIN(PIN_TRY_LIMIT,PIN_SIZE);
-//		pin.update(new byte[]{0x01,0x02,0x03,0x04},(short) 0, PIN_SIZE);
-//		/*
-//		 * This method registers the applet with the JCRE on the card.
-//		 */
-//		register();
-//	}
-	
 	
 	/*
 	 * This method is called by the JCRE when installing the applet on the card.
 	 */
 	public static void install(byte bArray[], short bOffset, byte bLength)
 			throws ISOException {
-		new IdentityCard();
-	}
+			new IdentityCard();
+		}
 	
 	/*
 	 * If no tries are remaining, the applet refuses selection.
@@ -133,21 +120,21 @@ public class IdentityCard extends Applet {
 		
 //		to be coded 
 		case GET_eGov_DATA:
-			getGovData(apdu);
+			eGov_DATA(apdu);
 			break;
 
-		case GET_Health_DATA:
-			getHealthData(apdu);
-			break;
-			
-		case GET_SN_DATA:
-			getSNData(apdu);
-			break;
-			
-
-		case GET_def_DATA:
-			getdefData(apdu);
-			break;
+//		case GET_Health_DATA:
+//			getHealthData(apdu);
+//			break;
+//			
+//		case GET_SN_DATA:
+//			getSNData(apdu);
+//			break;
+//			
+//
+//		case GET_def_DATA:
+//			getdefData(apdu);
+//			break;
 
 //			timestamp implementation to be discussed
 //		case GET_TS_DATA:
@@ -218,18 +205,19 @@ public class IdentityCard extends Applet {
 	}
 	
 //		working in progress for all INS
-//	private byte[]  getGovGET_eGov_DATA(APDU apdu){
-//		//If the pin is not validated, a response APDU with the
-//		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
-//		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
-//		else{
-//			//This sequence of three methods sends the data contained in
-//			//'identityFile' with offset '0' and length 'identityFile.length'
-//			//to the host application.
-//
-//			
-//		}
-//	}
+	private void eGov_DATA(APDU apdu){
+		//If the pin is not validated, a response APDU with the
+		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
+		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+		else{
+			//This sequence of three methods sends the data contained in
+			//'identityFile' with offset '0' and length 'identityFile.length'
+			//to the host application.
+			apdu.setOutgoing();
+			apdu.setOutgoingLength((short)name.length);
+			apdu.sendBytesLong(name,(short)0,(short)name.length);
+		}
+	}
 	
 	// time should be gotten from timestamp server
 //		private void getTime(APDU apdu){
