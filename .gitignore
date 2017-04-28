@@ -3,7 +3,7 @@ globalplatform-6.0.0/*
 gpshell-1.4.4/*
 jcardsim/*
 
-workspace/.classpath
+workspace/JavaCard/.classpath
 
 *.log
 
