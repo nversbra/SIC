@@ -1,5 +1,6 @@
 package com.company;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.net.ssl.SSLSocket;
 import java.io.*;
@@ -41,12 +42,16 @@ public class SSLServerThread extends Thread{
 
                 while ((inputLine = in.readLine()) != null) {
                     String nonce = inputLine;
-                    //System.out.println(nonce);
-                    String dec_nonce = decrypt(nonce,TSKey.getPrivate());
+                    String signature= null;
                     String ctime = get_time();
-                    String signature = sign(dec_nonce + ctime, TSKey.getPrivate());
-                    out.println(ctime +" "+ signature);
-                    //System.out.println(inputLine);
+                    try {
+                        String dec_nonce = decrypt(nonce,TSKey.getPrivate());
+                        signature = sign(dec_nonce + ctime, TSKey.getPrivate());
+                        out.println(ctime +" "+ signature);
+                    } catch (BadPaddingException e) {
+                        signature = "Bad padding";
+                        out.println(signature);
+                    }
                 }
 
                 // Close the streams and the socket
