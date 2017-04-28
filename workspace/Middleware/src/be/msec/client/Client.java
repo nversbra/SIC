@@ -9,6 +9,8 @@ import be.msec.client.connection.SimulatedConnection;
 import javax.smartcardio.*;
 
 public class Client {
+	
+	//testing git
 
 	private final static byte IDENTITY_CARD_CLA =(byte)0x80;
 	private static final byte VALIDATE_PIN_INS = 0x22;
@@ -99,7 +101,7 @@ public class Client {
 			}
 			
 			//2. Send PIN
-			a = new CommandAPDU(IDENTITY_CARD_CLA, VALIDATE_PIN_INS, 0x00, 0x00,new byte[]{0x01,0x02,0x03,0x04});
+			a = new CommandAPDU(GET_eGov_DATA, nym_Gov);
 			r = c.transmit(a);
 
 			System.out.println(r);
