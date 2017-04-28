@@ -1,6 +1,8 @@
 package be.msec.client;
 
 import be.msec.client.connection.Connection;
+
+
 import be.msec.client.connection.IConnection;
 import be.msec.client.connection.SimulatedConnection;
 
@@ -12,6 +14,41 @@ public class Client {
 	private static final byte VALIDATE_PIN_INS = 0x22;
 	private final static short SW_VERIFICATION_FAILED = 0x6300;
 	private final static short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
+	
+	//INS codes for different SPs
+	private final static byte GET_eGov_DATA=(byte)0x05;
+	private final static byte GET_Health_DATA=(byte)0x06;	
+	private final static byte GET_SN_DATA=(byte)0x07;
+	private final static byte GET_def_DATA=(byte)0x08;
+	//	timestamp implementation to be discussed
+	//private final static byte GET_TS_DATA=(byte)0x09;
+	
+	//individuals identified by a service-specific pseudonym
+	private byte[] nym_Gov = new byte[]{0x11}; // to have something to test data saving on javacard
+	private byte[] nym_Health = new byte[]{0x12}; // to have something to test data saving on javacard
+	private byte[] nym_SN = new byte[]{0x13}; // to have something to test data saving on javacard
+	private byte[] nym_def = new byte[]{0x14}; // to have something to test data saving on javacard
+	
+	private byte[] name;
+	private byte[] address;
+	private byte[] country;
+	private byte[] birthdate;
+	private byte[] age;
+	private byte[] gender;
+	private byte[] picture;
+	private byte[] bloodType;
+	
+	//Certificates and Keys
+	private final static byte CertC0=(byte)0x20;	//common cert
+	private final static byte SKC0=(byte)0x21;
+	private final static byte CertCA=(byte)0x22;	//CA
+	private final static byte CertG=(byte)0x23;	//cert for gov timestam
+	private final static byte SKG=(byte)0x24;
+	private final static byte CertSP=(byte)0x25;	//cert in each domain
+	private final static byte SKsp=(byte)0x26;
+	private final static byte Ku=(byte)0x27;
+	private final static byte PKG=(byte)0x28;
+	
 	/**
 	 * @param args
 	 */
@@ -20,7 +57,7 @@ public class Client {
 		boolean simulation = true;		// Choose simulation vs real card here
 
 		if (simulation) {
-			//Simulation:
+			//Simulation:	
 			c = new SimulatedConnection();
 		} else {
 			//Real Card:
@@ -42,6 +79,8 @@ public class Client {
 			
 			if (simulation) {
 				//0. create applet (only for simulator!!!)
+				//Constructs a CommandAPDU from the four header bytes, command data, and expected response data length. (see link above)
+				// 0x7f = 127 in decimal
 				a = new CommandAPDU(0x00, 0xa4, 0x04, 0x00,new byte[]{(byte) 0xa0, 0x00, 0x00, 0x00, 0x62, 0x03, 0x01, 0x08, 0x01}, 0x7f);
 				r = c.transmit(a);
 				System.out.println(r);
