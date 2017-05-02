@@ -6,16 +6,18 @@ import be.msec.client.connection.Connection;
 import be.msec.client.connection.IConnection;
 import be.msec.client.connection.SimulatedConnection;
 
+import java.util.Arrays;
+
 import javax.smartcardio.*;
 
 public class Client {
-	
-	//testing git
 
 	private final static byte IDENTITY_CARD_CLA =(byte)0x80;
 	private static final byte VALIDATE_PIN_INS = 0x22;
 	private final static short SW_VERIFICATION_FAILED = 0x6300;
 	private final static short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
+	
+	private final static byte GET_SERIAL_INS= 0x24;
 	
 	//INS codes for different SPs
 	private final static byte GET_eGov_DATA=(byte)0x05;
@@ -26,7 +28,7 @@ public class Client {
 	//private final static byte GET_TS_DATA=(byte)0x09;
 	
 	//individuals identified by a service-specific pseudonym
-	private byte[] nym_Gov = new byte[]{0x11}; // to have something to test data saving on javacard
+	private  byte[] nym_Gov = new byte[]{0x11}; // to have something to test data saving on javacard
 	private byte[] nym_Health = new byte[]{0x12}; // to have something to test data saving on javacard
 	private byte[] nym_SN = new byte[]{0x13}; // to have something to test data saving on javacard
 	private byte[] nym_def = new byte[]{0x14}; // to have something to test data saving on javacard
@@ -101,7 +103,7 @@ public class Client {
 			}
 			
 			//2. Send PIN
-			a = new CommandAPDU(GET_eGov_DATA, nym_Gov);
+			a = new CommandAPDU(IDENTITY_CARD_CLA, VALIDATE_PIN_INS, 0x00, 0x00,new byte[]{0x01,0x02,0x03,0x04});
 			r = c.transmit(a);
 
 			System.out.println(r);
@@ -109,10 +111,37 @@ public class Client {
 			else if(r.getSW()!=0x9000) throw new Exception("Exception on the card: " + r.getSW());
 			System.out.println("PIN Verified");
 			
+			
+			// get Serial#, example to get data from card
+			// this prints a single entry of the byte array
+			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_SERIAL_INS, 0x00, 0x00);
+			r = c.transmit(a);
+
+			System.out.println(r);
+			if (r.getSW()==SW_VERIFICATION_FAILED) throw new Exception("PIN INVALID");
+			else if(r.getSW()!=0x9000) throw new Exception("Exception on the card: " + r.getSW());
+
+			//print response data array
+			byte[] b =r.getData();
+			String s = Arrays.toString(b);
+			System.out.println(s);
+
+			//decimal encoding, choice of '8' is only to extract an example from the byte array b
+			System.out.println((byte)r.getData()[8]);
+			//ASCII
+			System.out.println(new String(new byte[]{ (byte)r.getData() [8]}, "US-ASCII"));
+
+			//eGov data
+//			System.out.println("FooBar:");
+//			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_eGov_DATA, 0x00, 0x00);
+//			r = c.transmit(a);
+			
 		} catch (Exception e) {
 			throw e;
 		}
+
 		finally {
+			System.out.println("------ end connection ------");
 			c.close();  // close the connection with the card
 		}
 
