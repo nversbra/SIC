@@ -1,10 +1,21 @@
 package be.msec.smartcard;
 
+
+//import java.security.KeyPair;
+//import java.security.KeyPairGenerator;
+//import java.security.PrivateKey;
+//import java.security.PublicKey;
+//import javax.crypto.Cipher;
+
 import javacard.framework.APDU;
 import javacard.framework.Applet;
 import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
 import javacard.framework.OwnerPIN;
+
+//// in client not card
+//import javacard.security.*;
+//import javacardx.crypto.*;  //creating keys for use in symmetric algorithms
 
 public class IdentityCard extends Applet {
 //	CLA code in CommandAPDU header
@@ -16,49 +27,62 @@ public class IdentityCard extends Applet {
 	
 	private final static byte PIN_TRY_LIMIT =(byte)0x03;
 	private final static byte PIN_SIZE =(byte)0x04;
+	
 		
-	//INS codes for different SPs
+//	//INS codes for different SPs
 	private final static byte GET_eGov_DATA=(byte)0x05;
 	private final static byte GET_Health_DATA=(byte)0x06;	
 	private final static byte GET_SN_DATA=(byte)0x07;
 	private final static byte GET_def_DATA=(byte)0x08;
 	//	timestamp implementation to be discussed
-	//private final static byte GET_TS_DATA=(byte)0x09;
+	private final static byte GET_TS_DATA=(byte)0x09;
+	private final static byte SET_Data=(byte)0x10;
+	private final static byte Set_PIN=(byte)0x15;
 	
 	private final static short SW_VERIFICATION_FAILED = 0x6300;
 	private final static short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
+
+	private static final APDU APDU = null;
 	
-//	instance variables declaration
+////	instance variables declaration
 	private byte[] serial = new byte[]{0x30, 0x35, 0x37, 0x36, 0x39, 0x30, 0x31, 0x05};
 	private OwnerPIN pin;
-	private byte[] buffer;
-	//individuals identified by a service-specific pseudonym
+//	private byte[] buffer;
+//	//individuals identified by a service-specific pseudonym
 	private byte[] nym_Gov = new byte[]{0x11}; // to have something to test data saving on javacard
-	private byte[] nym_Health = new byte[]{0x12}; // to have something to test data saving on javacard
-	private byte[] nym_SN = new byte[]{0x13}; // to have something to test data saving on javacard
-	private byte[] nym_def = new byte[]{0x14}; // to have something to test data saving on javacard
+//	private byte[] nym_Health = new byte[]{0x12};
+//	private byte[] nym_SN = new byte[]{0x13};
+//	private byte[] nym_def = new byte[]{0x14};
+//	
+////	instance variables
+//	private byte[] name = new byte[]{0x01,0x02,0x03,0x04};
+	private byte[] name = {'s', 't', 'r', 'i', 'n', 'g'};
+//	private byte[] name;
+//	private byte[] address;
+//	private byte[] country;
+//	private byte[] birthdate;
+//	private byte[] age;
+//	private byte[] gender;
+//	private byte[] picture;
+//	private byte[] bloodType;
 	
-//	instance variables
-	private byte[] name= new byte[]{0x33};
-	private byte[] address;
-	private byte[] country;
-	private byte[] birthdate;
-	private byte[] age;
-	private byte[] gender;
-	private byte[] picture;
-	private byte[] bloodType;
+	//personal informationn saved on card
+	//input above instance variables into info below
+	private byte[] info;
+	private short incomingData;
+	private short newPin;
 	
-	private final static byte CertC0=(byte)0x20;	//common cert
-	private final static byte SKC0=(byte)0x21;
-	private final static byte CertCA=(byte)0x22;	//CA
-	private final static byte CertG=(byte)0x23;	//cert for gov timestam
-	private final static byte SKG=(byte)0x24;
-	private final static byte CertSP=(byte)0x25;	//cert in each domain
-	private final static byte SKsp=(byte)0x26;
-	private final static byte Ku=(byte)0x27;
-	private final static byte PKG=(byte)0x28;
-
 	
+//	private final static byte CertC0=(byte)0x20;	//common cert
+//	private final static byte SKC0=(byte)0x21;
+//	private final static byte CertCA=(byte)0x22;	//CA
+//	private final static byte CertG=(byte)0x23;	//cert for gov timestam
+//	private final static byte SKG=(byte)0x24;
+//	private final static byte CertSP=(byte)0x25;	//cert in each domain
+//	private final static byte SKsp=(byte)0x26;
+//	private final static byte Ku=(byte)0x27;
+//	private final static byte PKG=(byte)0x28;
+		
 //	allocate all memory applet needs during its lifetime
 
 	private IdentityCard() {
@@ -71,9 +95,16 @@ public class IdentityCard extends Applet {
 		/*
 		 * This method registers the applet with the JCRE on the card.
 		 */
+		//create placeholder for personal information to be given per service provider
+		//4086 from tutorial, might be too long for this javacard but might work in jcwde
+		info = new byte[4086];
 		register();
 	}
 
+//	//Create object of keys
+//    RSAPrivateKey thePrivateKey = (RSAPrivateKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PRIVATE, KeyBuilder.LENGTH_RSA_512, false);
+//    RSAPublicKey thePublickKey = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_512, false);
+//    KeyPair theKeyPair = new KeyPair(thePublickKey, thePrivateKey);
 	
 	/*
 	 * This method is called by the JCRE when installing the applet on the card.
@@ -98,47 +129,46 @@ public class IdentityCard extends Applet {
 	 */
 	public void process(APDU apdu) throws ISOException {
 		//A reference to the buffer, where the APDU data is stored, is retrieved.
-		//Receives data from buffer. Here we can have our own protocol
 		byte[] buffer = apdu.getBuffer();
+		//needed for looping when sending large arrays
+		 short LC = apdu.getIncomingLength();
 		
 		//If the APDU selects the applet, no further processing is required.
-		if(this.selectingApplet())
-		
+		if(this.selectingApplet()){
+			return;
+		}
 		//Check whether the indicated class of instructions is compatible with this applet.
 		if (buffer[ISO7816.OFFSET_CLA] != IDENTITY_CARD_CLA)ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
 		//A switch statement is used to select a method depending on the instruction
 		switch(buffer[ISO7816.OFFSET_INS]){
-		
-		// suggest moving this outside 'switch' as a stand-alone elevated requirement for processing requests
 		case VALIDATE_PIN_INS:
 			validatePIN(apdu);
 			break;
-		
 		case GET_SERIAL_INS:
 			getSerial(apdu);
 			break;
-		
-//		to be coded 
 		case GET_eGov_DATA:
 			eGov_DATA(apdu);
 			break;
-
-//		case GET_Health_DATA:
-//			getHealthData(apdu);
+		case GET_Health_DATA:
+			HealthDATA(apdu);
+			break;
+		case GET_SN_DATA:
+			SNDATA(apdu);
+			break;
+		case GET_def_DATA:
+			defDATA(apdu);
+			break;
+		case GET_TS_DATA:
+			TSDATA(apdu);
+			break;
+//		//hard code
+//		case SET_Data:
+//			setData(apdu);
 //			break;
-//			
-//		case GET_SN_DATA:
-//			getSNData(apdu);
-//			break;
-//			
-//
-//		case GET_def_DATA:
-//			getdefData(apdu);
-//			break;
-
-//			timestamp implementation to be discussed
-//		case GET_TS_DATA:
-//			getTSData(apdu);
+//		//hard code
+//		case Set_PIN:
+//			setPin(apdu);
 //			break;
 			
 		//If no matching instructions are found it is indicated in the status word of the response.
@@ -165,7 +195,6 @@ public class IdentityCard extends Applet {
 			//Most recent smart cards, however, have buffers that can contain the maximum
 			//data size. This can be found in the smart card specifications.
 			//If the buffer is not large enough, the following method can be used:
-			//
 			//byte[] buffer = apdu.getBuffer();
 			//short bytesLeft = (short) (buffer[ISO7816.OFFSET_LC] & 0x00FF);
 			//Util.arrayCopy(buffer, START, storage, START, (short)5);
@@ -186,7 +215,7 @@ public class IdentityCard extends Applet {
 	}
 	
 	/*
-	 * This method checks whether the user is authenticated and sends
+	 * This method checks whetherhttp://stackoverflow.com/questions/8264850/how-to-write-and-read-data-from-smart-card-using-java-card-apdu the user is authenticated and sends
 	 * the identity file.
 	 */
 	
@@ -219,21 +248,96 @@ public class IdentityCard extends Applet {
 		}
 	}
 	
-	// time should be gotten from timestamp server
-//		private void getTime(APDU apdu){
-//			//If the pin is not validated, a response APDU with the
-//			//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
-//			if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
-//			else{
-//			//return local time
-//			LocalDateTime ldt = new LocalDateTime();
-////			return ldt.getSecond();
-//			Calendar cal = Calendar.getInstance();
-//	        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-////	        return sdf.format(cal.getTime());
-//	        // Get the current date and time
-////	        LocalDateTime currentTime = LocalDateTime.now();
-////	        return currentTime;
-//;		}
+	private void HealthDATA(APDU apdu){
+		//If the pin is not validated, a response APDU with the
+		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
+		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+		else{
+			//This sequence of three methods sends the data contained in
+			//'identityFile' with offset '0' and length 'identityFile.length'
+			//to the host application.
+			apdu.setOutgoing();
+			apdu.setOutgoingLength((short)name.length);
+			apdu.sendBytesLong(name,(short)0,(short)name.length);
+		}
+	}	
+	
+	
+	private void defDATA(APDU apdu){
+		//If the pin is not validated, a response APDU with the
+		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
+		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+		else{
+			//This sequence of three methods sends the data contained in
+			//'identityFile' with offset '0' and length 'identityFile.length'
+			//to the host application.
+			apdu.setOutgoing();
+			apdu.setOutgoingLength((short)info.length);
+			apdu.sendBytesLong(info,(short)0,(short)info.length);
+		}
+	}
+	
+	//social network 
+	private void SNDATA(APDU apdu){
+		//If the pin is not validated, a response APDU with the
+		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
+		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+		else{
+			//This sequence of three methods sends the data contained in
+			//'identityFile' with offset '0' and length 'identityFile.length'
+			//to the host application.
+			apdu.setOutgoing();
+			apdu.setOutgoingLength((short)info.length);
+			apdu.sendBytesLong(info,(short)0,(short)info.length);
+		}
+	}
+
+	//timeStamp
+	private void TSDATA(APDU apdu){
+		//If the pin is not validated, a response APDU with the
+		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
+		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+		else{
+			//This sequence of three methods sends the data contained in
+			//'identityFile' with offset '0' and length 'identityFile.length'
+			//to the host application.
+			apdu.setOutgoing();
+			apdu.setOutgoingLength((short)info.length);
+			apdu.sendBytesLong(info,(short)0,(short)info.length);
+		}
+	}
+	
+//	maybe for later if we have the time
+//	//no need for now, hard coded in
+//	//gov initially sets data
+//	private void setData(APDU apdu){
+//	    short dataOffset = apdu.getOffsetCdata();
+//	    short bytes_left = (short) buffer[ISO.OFFSET_LC];
+//		short readCount = apdu.setIncomingAndReceive();
+//		while (bytes_left > 0) {
+//		//{process received data in buffer}
+//		bytes_left -= readCount;
+//		//get more data
+//		readCount = apdu.receiveBytes (ISO.OFFSET_CDDATA);
+//		}	    
+//		//verification via certificate of
+//		apdu.setIncomingAndReceive();
+//		apdu.receiveBytes(incomingData);
 //	}
+//
+//	
+//	//no need for now, it's done by the client
+//	//owner of card sets pin
+//	private void setPin(APDU apdu){
+//		//If the pin is not validated, a response APDU with the
+//		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
+//		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+//		else{
+//			apdu.setIncomingAndReceive();
+//			apdu.receiveBytes(newPin);
+//			// use: update(byte[] pin, short offset, byte length)
+//			// to update pin object
+//		}
+//	}
+	
 }

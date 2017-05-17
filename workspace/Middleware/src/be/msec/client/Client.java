@@ -1,14 +1,15 @@
 package be.msec.client;
 
 import be.msec.client.connection.Connection;
-
-
 import be.msec.client.connection.IConnection;
 import be.msec.client.connection.SimulatedConnection;
+//import be.msec.smartcard.KeyPair;
+//import be.msec.smartcard.RSAPrivateKey;
+//import be.msec.smartcard.RSAPublicKey;
 
 import java.util.Arrays;
-
 import javax.smartcardio.*;
+import java.io.*;
 
 public class Client {
 
@@ -21,9 +22,9 @@ public class Client {
 	
 	//INS codes for different SPs
 	private final static byte GET_eGov_DATA=(byte)0x05;
-	private final static byte GET_Health_DATA=(byte)0x06;	
-	private final static byte GET_SN_DATA=(byte)0x07;
-	private final static byte GET_def_DATA=(byte)0x08;
+//	private final static byte GET_Health_DATA=(byte)0x06;	
+//	private final static byte GET_SN_DATA=(byte)0x07;
+//	private final static byte GET_def_DATA=(byte)0x08;
 	//	timestamp implementation to be discussed
 	//private final static byte GET_TS_DATA=(byte)0x09;
 	
@@ -126,26 +127,22 @@ public class Client {
 			String s = Arrays.toString(b);
 			System.out.println(s);
 
-			//decimal encoding, choice of '8' is only to extract an example from the byte array b
-			System.out.println((byte)r.getData()[8]);
-			//ASCII
-			System.out.println(new String(new byte[]{ (byte)r.getData() [8]}, "US-ASCII"));
-
 			//eGov data
-//			System.out.println("FooBar:");
-//			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_eGov_DATA, 0x00, 0x00);
-//			r = c.transmit(a);
+			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_eGov_DATA, 0x00, 0x00);
+			r = c.transmit(a);
 			
-		} catch (Exception e) {
-			throw e;
+			//print response data array
+			byte[] g =r.getData();
+			for(int i=6; i <g.length; i++){
+			System.out.print(new String(new byte[]{ (byte)r.getData() [i]}, "US-ASCII"));	
 		}
-
+			
+	
+			}
 		finally {
-			System.out.println("------ end connection ------");
+			System.out.println("\n------ end connection ------");
 			c.close();  // close the connection with the card
 		}
-
-
 	}
-
 }
+	
