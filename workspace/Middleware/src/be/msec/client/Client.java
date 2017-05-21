@@ -3,13 +3,11 @@ package be.msec.client;
 import be.msec.client.connection.Connection;
 import be.msec.client.connection.IConnection;
 import be.msec.client.connection.SimulatedConnection;
-//import be.msec.smartcard.KeyPair;
-//import be.msec.smartcard.RSAPrivateKey;
-//import be.msec.smartcard.RSAPublicKey;
-
 import java.util.Arrays;
 import javax.smartcardio.*;
 import java.io.*;
+import java.security.*;
+
 
 public class Client {
 
@@ -27,6 +25,7 @@ public class Client {
 //	private final static byte GET_def_DATA=(byte)0x08;
 	//	timestamp implementation to be discussed
 	//private final static byte GET_TS_DATA=(byte)0x09;
+	private static byte REQ_VALIDATION_INS=(byte)0x16;
 	
 	//individuals identified by a service-specific pseudonym
 	private  byte[] nym_Gov = new byte[]{0x11}; // to have something to test data saving on javacard
@@ -103,7 +102,7 @@ public class Client {
 				if (r.getSW()!=0x9000) throw new Exception("Applet selection failed");
 			}
 			
-			//2. Send PIN
+//Send PIN
 			a = new CommandAPDU(IDENTITY_CARD_CLA, VALIDATE_PIN_INS, 0x00, 0x00,new byte[]{0x01,0x02,0x03,0x04});
 			r = c.transmit(a);
 
@@ -113,29 +112,51 @@ public class Client {
 			System.out.println("PIN Verified");
 			
 			
-			// get Serial#, example to get data from card
-			// this prints a single entry of the byte array
-			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_SERIAL_INS, 0x00, 0x00);
-			r = c.transmit(a);
-
-			System.out.println(r);
-			if (r.getSW()==SW_VERIFICATION_FAILED) throw new Exception("PIN INVALID");
-			else if(r.getSW()!=0x9000) throw new Exception("Exception on the card: " + r.getSW());
-
-			//print response data array
-			byte[] b =r.getData();
-			String s = Arrays.toString(b);
-			System.out.println(s);
-
-			//eGov data
-			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_eGov_DATA, 0x00, 0x00);
-			r = c.transmit(a);
+//Send time to card, receive boolean
+			//In progress...
+			//first step to get signed time from G then pass it along
+			SSLServerThread st = new SSLServerThread();//tried this but...
 			
-			//print response data array
-			byte[] g =r.getData();
-			for(int i=6; i <g.length; i++){
-			System.out.print(new String(new byte[]{ (byte)r.getData() [i]}, "US-ASCII"));	
-		}
+			//the card needs to handle singed time from client
+			byte[] signedTime = "SignedTime".getBytes("ASCII");
+			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, signedTime); 
+			r = c.transmit(a); 
+			System.out.println("\nsigned Data - HEX: "+toHex(signedTime));
+			// checkSW(response); 
+
+			byte[] signature = r.getData();
+			//get time from Server
+ 
+			//certificate handling
+			//the card needs to handle singed time from client
+			byte[] signedData = "SignedTime".getBytes("ASCII");
+			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, signedData); 
+			r = c.transmit(a); 
+			System.out.println("\nsigned Data - HEX: "+toHex(signedData));
+			// checkSW(response); 
+
+			byte[] signature = r.getData();
+			System.out.println();
+			System.out.printf("Signature from card: %s\n", toHex(signature));
+            
+//// get Serial#, example to get data from card	
+//			r = c.transmit(a);
+//			System.out.println(r);
+//			//print response data array
+//			byte[] b =r.getData();
+//			String s = Arrays.toString(b);
+//			System.out.println("Serial#: "+ s);
+//
+//
+////eGov data
+//			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_eGov_DATA, 0x00, 0x00);
+//			r = c.transmit(a);
+//			
+//			//print response data array
+//			byte[] g =r.getData();
+//			for(int i=6; i <g.length; i++){
+//			System.out.print(new String(new byte[]{ (byte)r.getData() [i]}, "US-ASCII"));	
+//		}
 			
 	
 			}
@@ -144,5 +165,19 @@ public class Client {
 			c.close();  // close the connection with the card
 		}
 	}
+	
+//	public static Signature getSig(Signature){
+//		Signature signature = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1,false) ; //OR ALG_RSA_SHA_512_PKCS1
+//		signature.initSign(privateKey, Signature.M);
+//	}
+	
+    public static String toHex(byte[] bytes) { 
+        StringBuilder buff = new StringBuilder(); 
+        for (byte b : bytes) { 
+            buff.append(String.format("%02X", b)); 
+        } 
+        return buff.toString(); 
+    } 
+	
 }
 	
