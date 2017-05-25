@@ -14,7 +14,8 @@ public class Client {
 	private final static byte IDENTITY_CARD_CLA =(byte)0x80;
 	private static final byte VALIDATE_PIN_INS = 0x22;
 	private final static short SW_VERIFICATION_FAILED = 0x6300;
-	private final static short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
+	private static final short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
+	private static final int  SUCCESS_RESPONS = 36864;
 	
 	private final static byte GET_SERIAL_INS= 0x24;
 	
@@ -56,6 +57,9 @@ public class Client {
 	/**
 	 * @param args
 	 */
+	
+	static TSClient TS = new TSClient();
+	
 	public static void main(String[] args) throws Exception {
 		IConnection c;
 		boolean simulation = true;		// Choose simulation vs real card here
@@ -88,18 +92,18 @@ public class Client {
 				a = new CommandAPDU(0x00, 0xa4, 0x04, 0x00,new byte[]{(byte) 0xa0, 0x00, 0x00, 0x00, 0x62, 0x03, 0x01, 0x08, 0x01}, 0x7f);
 				r = c.transmit(a);
 				System.out.println(r);
-				if (r.getSW()!=0x9000) throw new Exception("select installer applet failed");
+				if (r.getSW()!=SUCCESS_RESPONS ) throw new Exception("select installer applet failed");
 				
 				a = new CommandAPDU(0x80, 0xB8, 0x00, 0x00,new byte[]{0xb, 0x01,0x02,0x03,0x04, 0x05, 0x06, 0x07, 0x08, 0x09,0x00, 0x00, 0x00}, 0x7f);
 				r = c.transmit(a);
 				System.out.println(r);
-				if (r.getSW()!=0x9000) throw new Exception("Applet creation failed");
+				if (r.getSW()!=SUCCESS_RESPONS ) throw new Exception("Applet creation failed");
 				
 				//1. Select applet  (not required on a real card, applet is selected by default)
 				a = new CommandAPDU(0x00, 0xa4, 0x04, 0x00,new byte[]{0x01,0x02,0x03,0x04, 0x05, 0x06, 0x07, 0x08, 0x09,0x00, 0x00}, 0x7f);
 				r = c.transmit(a);
 				System.out.println(r);
-				if (r.getSW()!=0x9000) throw new Exception("Applet selection failed");
+				if (r.getSW()!=SUCCESS_RESPONS ) throw new Exception("Applet selection failed");
 			}
 			
 //Send PIN
@@ -108,16 +112,18 @@ public class Client {
 
 			System.out.println(r);
 			if (r.getSW()==SW_VERIFICATION_FAILED) throw new Exception("PIN INVALID");
-			else if(r.getSW()!=0x9000) throw new Exception("Exception on the card: " + r.getSW());
+			else if(r.getSW()!=SUCCESS_RESPONS ) throw new Exception("Exception on the card: " + r.getSW());
 			System.out.println("PIN Verified");
 			
 			
 //Send time to card, receive boolean
 			//In progress...
 			//first step to get signed time from G then pass it along
-			SSLServerThread st = new SSLServerThread();//tried this but...
-			
+			//SSLServerThread st = new SSLServerThread();//tried this but...
+			String timeResponse = TS.getTime("a");
+			System.out.println("Recieved Time: " + timeResponse);
 			//the card needs to handle singed time from client
+			
 			byte[] signedTime = "SignedTime".getBytes("ASCII");
 			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, signedTime); 
 			r = c.transmit(a); 
@@ -135,7 +141,7 @@ public class Client {
 			System.out.println("\nsigned Data - HEX: "+toHex(signedData));
 			// checkSW(response); 
 
-			byte[] signature = r.getData();
+			signature = r.getData();
 			System.out.println();
 			System.out.printf("Signature from card: %s\n", toHex(signature));
             

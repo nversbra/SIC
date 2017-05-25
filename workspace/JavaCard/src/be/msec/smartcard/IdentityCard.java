@@ -1,7 +1,7 @@
 package be.msec.smartcard;
 
 
-import java.util.Arrays;
+//import java.util.Arrays;
 
 //import be.msec.client.RandomData;
 //import be.msec.client.bte;
@@ -232,11 +232,16 @@ public class IdentityCard extends Applet {
 		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
 		else{
 			byte[] buffer = apdu.getBuffer();
+			byte[] newBuff = new byte[11];   // contains currentTime   
 			//read apdu time data sent from Client
-			//verify time validity from G server through middleware
-			currentTime = Arrays.copyOfRange(buffer, 9,20 );
+			//verify time validity from G server through middleware 
+			short srcOff = (short) 9;
+			short destOff = (short) 0;
+			short length = (short) 11;
+			//currentTime =
+			Util.arrayCopy(buffer, srcOff, newBuff, destOff, length);
 			//within same year, for completeness, 
-			if(lastValidationTime != null && Util.arrayCompare(lastValidationTime, (short)0, currentTime, (short)0, (short)4)==0){
+			if(lastValidationTime != null && Util.arrayCompare(lastValidationTime, (short)0, newBuff, (short)0, (short)4)==0){
 				//check if within 24 hours, same day of year
 				if((short)(lastValidationTime[4]-currentTime[4])>1&&(short)(lastValidationTime[5]+currentTime[5])<2){
 				return true;

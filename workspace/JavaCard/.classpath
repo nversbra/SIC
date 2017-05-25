@@ -4,5 +4,6 @@
 	<classpathentry exported="true" kind="con" path="JCDK2.2.2"/>
 	<classpathentry kind="lib" path="/home/nversbra/SIC/workspace/java_card_kit-2_2_2/lib/javacardframework.jar"/>
 	<classpathentry kind="lib" path="/home/nversbra/SIC/workspace/java_card_kit-2_2_2/lib/api.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
