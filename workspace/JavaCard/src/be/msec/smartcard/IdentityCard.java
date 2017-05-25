@@ -31,6 +31,7 @@ public class IdentityCard extends Applet {
 //	INS codes
 	private static final byte VALIDATE_PIN_INS = 0x22;
 	private static final byte GET_SERIAL_INS = 0x24;
+	private static final byte GEN_NONCE = 0x25;
 	private final static byte PIN_TRY_LIMIT =(byte)0x03;
 	private final static byte PIN_SIZE =(byte)0x04;
 	private final static byte REQ_VALIDATION_INS=(byte)0x16;
@@ -81,6 +82,7 @@ public class IdentityCard extends Applet {
 //	data for certification and encryption/decryption, time needed for cert verification
 	private byte[] lastValidationTime = new byte[11]; //time format: "yyyy-D HH:mm:ss"
 	private byte[] currentTime = new byte[11];
+	private byte[] nonce  = new byte[]{'H','E','L','L','O'};
 //	private final static byte CertC0=(byte)0x20;	//common cert
 //	private final static byte SKC0=(byte)0x21;
 //	private final static byte CertCA=(byte)0x22;	//CA
@@ -91,7 +93,7 @@ public class IdentityCard extends Applet {
 //	private final static byte Ku=(byte)0x27;
 	private final static byte privKey=(byte)0x28;
 	private final static byte pubKey=(byte)0x29;
-		
+	
 //	allocate all memory applet needs during its lifetime
 
 	private IdentityCard() {
@@ -175,6 +177,10 @@ public class IdentityCard extends Applet {
 		case GET_TS_DATA:
 			TSDATA(apdu);
 			break;
+		case GEN_NONCE:
+			genNonce(apdu);
+			break;
+			
 //		//hard code
 //		case SET_Data:
 //			setData(apdu);
@@ -227,7 +233,26 @@ public class IdentityCard extends Applet {
 		else ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
 	}
 	
-//receive signed time from SP through Client; update card time if client time more recent 
+
+	//receive signed time from SP through Client; update card time if client time more recent 
+		private void genNonce(APDU apdu){
+			if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+			else{
+				//nonce  = new byte[20];
+				//RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+		        //rand.generateData(nonce, (short)0, (short)nonce.length);
+		        //nonce = {'h','e','l','l','o'};
+			    apdu.setOutgoing();
+				apdu.setOutgoingLength((short)nonce.length);
+				apdu.sendBytesLong(nonce,(short)0,(short)nonce.length);
+				//ISOException.throwIt(nonce);
+				
+			    }
+			}
+		
+	
+	
+	//receive signed time from SP through Client; update card time if client time more recent 
 	private boolean reqRevalidation(APDU apdu){
 		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
 		else{
@@ -254,11 +279,11 @@ public class IdentityCard extends Applet {
 	}
 		
 // 20 byte challenge
-	private RandomData getRand(){
+	private byte[] getRand(){
 		byte[] buf = new byte[20];
         RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
         rand.generateData(buf, (short)0, (short)buf.length);
-        return rand;
+        return buf;
 		}
 	
 	private void getSerial(APDU apdu){
