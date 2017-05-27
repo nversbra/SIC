@@ -193,7 +193,8 @@ public class Client {
 			System.out.println("\n------ end connection ------");
 			c.close();  // close the connection with the card
 		}
-	}
+	} 
+	//
 	
 //	public static Signature getSig(Signature){
 //		Signature signature = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1,false) ; //OR ALG_RSA_SHA_512_PKCS1
