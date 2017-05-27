@@ -31,7 +31,7 @@ public class IdentityCard extends Applet {
 //	INS codes
 	private static final byte VALIDATE_PIN_INS = 0x22;
 	private static final byte GET_SERIAL_INS = 0x24;
-	private static final byte GEN_NONCE = 0x25;
+	private static final byte GEN_NONCE = 0x20;
 	private final static byte PIN_TRY_LIMIT =(byte)0x03;
 	private final static byte PIN_SIZE =(byte)0x04;
 	private final static byte REQ_VALIDATION_INS=(byte)0x16;
@@ -82,11 +82,11 @@ public class IdentityCard extends Applet {
 //	data for certification and encryption/decryption, time needed for cert verification
 	private byte[] lastValidationTime = new byte[11]; //time format: "yyyy-D HH:mm:ss"
 	private byte[] currentTime = new byte[11];
-	private byte[] nonce  = new byte[]{'H','E','L','L','O'};
+	private byte[] nonce  = new byte[]{(byte)'H',(byte)'E',(byte)'L',(byte)'L',(byte)'O'};
 //	private final static byte CertC0=(byte)0x20;	//common cert
 //	private final static byte SKC0=(byte)0x21;
 //	private final static byte CertCA=(byte)0x22;	//CA
-//	private final static byte CertG=(byte)0x23;	//cert for gov timestam
+	private final static byte[] CertG= new byte[]{0x30, 0x48, 0x2, 0x41, 0x0,(byte) 0xb3, 0x2a, 0x28, (byte)0x95,(byte) 0x94, (byte)0xd6, 0x7d, 0xc, 0x1c,(byte) 0xfb, 0x2c, (byte)0xea, 0xe, 0x2e, 0x3d, (byte)0x8d, (byte)0xd3,(byte) 0x82, 0x26, (byte)0xc0, 0x14, 0x35, 0x37,(byte) 0xbb, 0x21, 0x30, 0x77, 0x24, 0x6a, 0xc,(byte) 0xd3, (byte)0xb9, (byte)0x96, 0x78, 0x72, 0x5b, 0x4e, 0x38, 0x2a,(byte) 0xf1,(byte) 0xd8, 0x4a, 0x18, (byte)0xb6, (byte)0xeb, (byte)0xb8, (byte)0xb5, (byte)0xdc, (byte)0xb3, (byte)0xbe, 0x7a, (byte)0xdb, 0x78, 0x5e, 0x3, 0x70, 0x13, (byte)0xc9, 0x6, 0x49, 0x76, 0x7f, (byte)0xf3, 0x6d, 0x2, 0x3, 0x1, 0x0, 0x1};	//cert for gov timestam
 //	private final static byte SKG=(byte)0x24;
 //	private final static byte CertSP=(byte)0x25;	//cert in each domain
 //	private final static byte SKsp=(byte)0x26;
@@ -189,7 +189,7 @@ public class IdentityCard extends Applet {
 //		case Set_PIN:
 //			setPin(apdu);
 //			break;
-			
+		//default: genNonce(apdu);	
 		//If no matching instructions are found it is indicated in the status word of the response.
 		//This can be done by using this method. As an argument a short is given that indicates
 		//the type of warning. There are several predefined warnings in the 'ISO7816' class.
@@ -242,7 +242,9 @@ public class IdentityCard extends Applet {
 				//RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
 		        //rand.generateData(nonce, (short)0, (short)nonce.length);
 		        //nonce = {'h','e','l','l','o'};
-			    apdu.setOutgoing();
+				
+				
+				apdu.setOutgoing();
 				apdu.setOutgoingLength((short)nonce.length);
 				apdu.sendBytesLong(nonce,(short)0,(short)nonce.length);
 				//ISOException.throwIt(nonce);

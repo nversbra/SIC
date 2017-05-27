@@ -85,6 +85,15 @@ public class TestClient {
         PublicKey publicKey = cert.getPublicKey();
 
 
+
+
+
+        byte[] derCert = cert.getEncoded();
+        for (int i=0;i<derCert.length;i++) {
+            System.out.print(derCert[i]);
+            System.out.print(",");
+        }
+
         return publicKey;
     }
 
