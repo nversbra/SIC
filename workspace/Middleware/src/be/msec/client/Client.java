@@ -6,6 +6,7 @@ import be.msec.client.connection.SimulatedConnection;
 import java.util.Arrays;
 import javax.smartcardio.*;
 import java.io.*;
+import java.nio.charset.Charset;
 import java.security.*;
 
 
@@ -13,6 +14,7 @@ public class Client {
 
 	private final static byte IDENTITY_CARD_CLA =(byte)0x80;
 	private static final byte VALIDATE_PIN_INS = 0x22;
+	private static final byte GEN_NONCE = 0x20;
 	private final static short SW_VERIFICATION_FAILED = 0x6300;
 	private static final short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
 	private static final int  SUCCESS_RESPONS = 36864;
@@ -120,15 +122,36 @@ public class Client {
 			//In progress...
 			//first step to get signed time from G then pass it along
 			//SSLServerThread st = new SSLServerThread();//tried this but...
-			String timeResponse = TS.getTime("a");
-			System.out.println("Recieved Time: " + timeResponse);
-			//the card needs to handle singed time from client
 			
-			byte[] signedTime = "SignedTime".getBytes("ASCII");
-			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, signedTime); 
+			a = new CommandAPDU(IDENTITY_CARD_CLA, GEN_NONCE, 0x00, 0x00); 
 			r = c.transmit(a); 
-			System.out.println("\nsigned Data - HEX: "+toHex(signedTime));
-			// checkSW(response); 
+			System.out.println(r);
+			byte[] b =r.getData();
+			
+		
+            
+            
+            byte[] slice = Arrays.copyOfRange(b, 6, b.length);
+            String newnonce =new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
+                
+                System.err.println( newnonce);    
+            
+            
+            
+			String nonce =new String(b, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
+			
+			System.out.println(b.toString());
+			System.out.println("\nnonce: "+(nonce));
+			String timeResponse = TS.getTime(nonce);
+			System.out.println("Recieved Time: " + timeResponse);
+			System.out.println(timeResponse.getBytes("ASCII"));
+			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, timeResponse.getBytes("ASCII")); 
+			r = c.transmit(a); 
+			
+			//System.out.println("\nsigned Data - HEX: "+toHex(signedTime));
+			// checkSW(response);
+			
+			//the card needs to handle singed time from client
 
 			byte[] signature = r.getData();
 			//get time from Server
