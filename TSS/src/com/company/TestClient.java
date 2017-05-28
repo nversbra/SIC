@@ -4,9 +4,11 @@ import javax.crypto.Cipher;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
+import java.math.BigInteger;
 import java.security.KeyStore;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.interfaces.RSAPublicKey;
 import java.util.Base64;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -83,7 +85,33 @@ public class TestClient {
 
         java.security.cert.Certificate cert = keyStore.getCertificate("ts cert");
         PublicKey publicKey = cert.getPublicKey();
+        RSAPublicKey pk = (RSAPublicKey) publicKey;
+        BigInteger Nk = pk.getModulus();
+        BigInteger Ek = pk.getPublicExponent();
 
+        byte[] Nkb = Nk.toByteArray();
+        byte[] Ekb = Ek.toByteArray();
+
+
+        System.out.println("");
+        System.out.println("");
+
+
+        for (int i=0; i< Nkb.length; i++){
+            System.out.print((short)Nkb[i]);
+            System.out.print(",");
+        }
+
+        System.out.println("");
+        System.out.println("");
+
+
+        for (int i=0; i< Ekb.length; i++){
+            System.out.print((short)Ekb[i]);
+            System.out.print(",");
+        }
+        System.out.println("");
+        System.out.println("");
 
         return publicKey;
     }

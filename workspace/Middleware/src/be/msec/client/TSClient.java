@@ -41,7 +41,8 @@ public class TSClient {
 	               
 	                
 	                    String enc_nonce = encrypt(nonce,TSkey);
-	                    out.println(enc_nonce);
+	                    //out.println(enc_nonce);
+	                    out.println(nonce);
 	                    String response = in.readLine();
 	                    receivedtime = response;
 	                    //System.out.println(response);

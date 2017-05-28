@@ -16,8 +16,10 @@ import javacard.framework.APDU;
 import javacard.framework.Applet;
 import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
+import javacard.framework.JCSystem;
 import javacard.framework.OwnerPIN;
 import javacard.security.*;
+import javacardx.crypto.Cipher;
 import javacard.framework.Util;
 
 //// in client not card
@@ -51,6 +53,16 @@ public class IdentityCard extends Applet {
 	private final static short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
 
 	private static final APDU APDU = null;
+	
+	private Cipher encryptCipher = Cipher.getInstance(Cipher.ALG_RSA_PKCS1 , false);
+	private final RSAPublicKey TSkey =  (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_512, false); 
+	byte[] TSN=new byte[]{0,-77,42,40,-107,-108,-42,125,12,28,-5,44,-22,14,46,61,-115,-45,-126,38,-64,20,53,55,-69,33,48,119,36,106,12,-45,-71,-106,120,114,91,78,56,42,-15,-40,74,24,-74,-21,-72,-75,-36,-77,-66,122,-37,120,94,3,112,19,-55,6,73,118,127,-13,109};
+	byte[] TSE=new byte[]{1,0,1};
+	
+	
+	private AESKey key;
+	
+	
 	
 ////	instance variables declaration
 	private byte[] serial = new byte[]{0x30, 0x35, 0x37, 0x36, 0x39, 0x30, 0x31, 0x05};
@@ -242,15 +254,24 @@ public class IdentityCard extends Applet {
 				//RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
 		        //rand.generateData(nonce, (short)0, (short)nonce.length);
 		        //nonce = {'h','e','l','l','o'};
+				TSkey.setModulus(TSN, (short)0,(short) TSN.length);
+				TSkey.setExponent(TSE, (short)0,(short) TSE.length);
 				
-				
+				final byte[] encryptedMsg = JCSystem.makeTransientByteArray(
+			            (short) 256, JCSystem.CLEAR_ON_DESELECT);
+				if (nonce.length >= TSN.length) {
+					 ISOException.throwIt(ISO7816.SW_CONDITIONS_NOT_SATISFIED);
+				}
+				encryptCipher.init(TSkey, Cipher.MODE_ENCRYPT);
+				encryptCipher.doFinal(nonce, (short) 0, (short)nonce.length, encryptedMsg, (short)0);
 				apdu.setOutgoing();
-				apdu.setOutgoingLength((short)nonce.length);
-				apdu.sendBytesLong(nonce,(short)0,(short)nonce.length);
+				apdu.setOutgoingLength((short)encryptedMsg.length);
+				apdu.sendBytesLong(encryptedMsg,(short)0,(short)encryptedMsg.length);
 				//ISOException.throwIt(nonce);
 				
 			    }
 			}
+		
 		
 	
 	
