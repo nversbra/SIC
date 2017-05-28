@@ -82,7 +82,8 @@ public class IdentityCard extends Applet {
 //	data for certification and encryption/decryption, time needed for cert verification
 	private byte[] lastValidationTime = new byte[11]; //time format: "yyyy-D HH:mm:ss"
 	private byte[] currentTime = new byte[11];
-	private byte[] nonce  = new byte[]{(byte)'H',(byte)'E',(byte)'L',(byte)'L',(byte)'O'};
+//	private byte[] nonce  = new byte[]{(byte)'H',(byte)'E',(byte)'L',(byte)'L',(byte)'O'};
+//	private byte[] nonce = new byte[]{0x07,0x05,0x06,0x07};
 //	private final static byte CertC0=(byte)0x20;	//common cert
 //	private final static byte SKC0=(byte)0x21;
 //	private final static byte CertCA=(byte)0x22;	//CA
@@ -91,8 +92,11 @@ public class IdentityCard extends Applet {
 //	private final static byte CertSP=(byte)0x25;	//cert in each domain
 //	private final static byte SKsp=(byte)0x26;
 //	private final static byte Ku=(byte)0x27;
-	private final static byte privKey=(byte)0x28;
-	private final static byte pubKey=(byte)0x29;
+//	private final static byte privKey=(byte)0x28;
+//	private final static byte pubKey=(byte)0x29;
+	private static PublicKey pubKey;
+	private static PrivateKey privKey;
+	
 	
 //	allocate all memory applet needs during its lifetime
 
@@ -108,15 +112,13 @@ public class IdentityCard extends Applet {
 		 */
 		//create placeholder for personal information to be given per service provider
 		//4086 from tutorial, might be too long for this javacard but might work in jcwde
-//		info = new byte[4086];
-		getPubKey();
+		//info = new byte[4086];
+		
+		getPubKey(); //initialize javacard keys
+//		nonce = genNonceInstance((short)3); //simple nonce
 		register();
 	}
 
-//	//Create object of keys
-//    RSAPrivateKey thePrivateKey = (RSAPrivateKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PRIVATE, KeyBuilder.LENGTH_RSA_512, false);
-//    RSAPublicKey thePublickKey = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_512, false);
-//    KeyPair theKeyPair = new KeyPair(thePublickKey, thePrivateKey);
 	
 	/*
 	 * This method is called by the JCRE when installing the applet on the card.
@@ -178,7 +180,9 @@ public class IdentityCard extends Applet {
 //		case GET_TS_DATA:
 //			TSDATA(apdu);
 //			break;
-		case GEN_NONCE:
+			
+//		generate a nonce of size 'n' for each run	
+		case GEN_NONCE: 
 			genNonce(apdu);
 			break;
 			
@@ -233,7 +237,6 @@ public class IdentityCard extends Applet {
 //		else ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
 		else ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
 	}
-	
 
 	//receive signed time from SP through Client; update card time if client time more recent 
 		private void genNonce(APDU apdu){
@@ -244,16 +247,14 @@ public class IdentityCard extends Applet {
 		        //rand.generateData(nonce, (short)0, (short)nonce.length);
 		        //nonce = {'h','e','l','l','o'};
 				
+				byte[] alice = genNonceInstance((short)5);
 				
 				apdu.setOutgoing();
-				apdu.setOutgoingLength((short)nonce.length);
-				apdu.sendBytesLong(nonce,(short)0,(short)nonce.length);
+				apdu.setOutgoingLength((short)alice.length);
+				apdu.sendBytesLong(alice,(short)0,(short)alice.length);
 				//ISOException.throwIt(nonce);
-				
 			    }
 			}
-		
-	
 	
 	//receive signed time from SP through Client; update card time if client time more recent 
 	private boolean reqRevalidation(APDU apdu){
@@ -280,15 +281,8 @@ public class IdentityCard extends Applet {
 			}
 		} return false;
 	}
-		
-// 20 byte challenge
-	private byte[] getRand(){
-		byte[] buf = new byte[20];
-        RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
-        rand.generateData(buf, (short)0, (short)buf.length);
-        return buf;
-		}
-	
+
+//card serial number-not real #
 	private void getSerial(APDU apdu){
 		//If the pin is not validated, a response APDU with the
 		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
@@ -303,7 +297,8 @@ public class IdentityCard extends Applet {
 		}
 	}
 	
-//		working in progress for all INS
+	//working in progress for all INS
+//Gov data
 	private void eGov_DATA(APDU apdu){
 		//If the pin is not validated, a response APDU with the
 		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
@@ -317,7 +312,8 @@ public class IdentityCard extends Applet {
 			apdu.sendBytesLong(name,(short)0,(short)name.length);
 		}
 	}
-	
+
+//Health data
 	private void HealthDATA(APDU apdu){
 		//If the pin is not validated, a response APDU with the
 		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
@@ -332,7 +328,7 @@ public class IdentityCard extends Applet {
 		}
 	}	
 	
-	
+//Default data	
 	private void defDATA(APDU apdu){
 		//If the pin is not validated, a response APDU with the
 		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
@@ -400,7 +396,15 @@ public class IdentityCard extends Applet {
 		kp.genKeyPair();
 		PrivateKey privKey = kp.getPrivate();
 		PublicKey pubKey = kp.getPublic();
-		
+	}
+	
+	//generate random array of size n, as nonce, an instance variable
+	private byte[] genNonceInstance(short n){
+		byte[] rn = new byte[n];
+		RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+//		RandomData rand = RandomData.getInstance(RandomData.ALG_PSEUDO_RANDOM); //works in generating nonce size n
+		rand.generateData(rn, (short)0, (short)rn.length);
+		return rn;
 	}
 
 	//concatenating two arrays in two steps, noting that current setup, ar1.length = 1
@@ -413,6 +417,14 @@ public class IdentityCard extends Applet {
 		//step 2: copy ar2 into remaining space in ar
 		Util.arrayCopy(ar, (short)ar1.length,ar2, (short)0, (short)ar.length);
 		return ar;
+	}
+	
+	// for a 20 byte challenge
+	private byte[] getRand(){
+		byte[] buf = new byte[20];
+	    RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+	    rand.generateData(buf, (short)0, (short)buf.length);
+	    return buf;
 	}
 	
 //	maybe for later if we have the time

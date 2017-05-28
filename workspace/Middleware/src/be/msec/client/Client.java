@@ -124,49 +124,57 @@ public class Client {
 			//SSLServerThread st = new SSLServerThread();//tried this but...
 			
 			a = new CommandAPDU(IDENTITY_CARD_CLA, GEN_NONCE, 0x00, 0x00); 
-			r = c.transmit(a); 
-			System.out.println(r);
-			byte[] b =r.getData();
+			r = c.transmit(a);
 			
-		
-            
-            
-            byte[] slice = Arrays.copyOfRange(b, 6, b.length);
-            String newnonce =new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
-                
-                System.err.println( newnonce);    
-            
-            
-            
-			String nonce =new String(b, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
 			
-			System.out.println(b.toString());
-			System.out.println("\nnonce: "+(nonce));
-			String timeResponse = TS.getTime(nonce);
-			System.out.println("Recieved Time: " + timeResponse);
-			System.out.println(timeResponse.getBytes("ASCII"));
-			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, timeResponse.getBytes("ASCII")); 
-			r = c.transmit(a); 
+			byte[] d1 = r.getData();
+			byte[] s1 = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
+			//check padding of data bytes, what are the extra bytes?
+			for(int i=6; i <d1.length; i++){
+				s1[i-6] = (byte)d1[i];
+			}
+			System.out.print("generate nonce instruction: ");
+			System.out.println("length of data array: " + d1.length);
+			System.out.println("Nonce: " + Arrays.toString(s1));
 			
-			//System.out.println("\nsigned Data - HEX: "+toHex(signedTime));
-			// checkSW(response);
-			
-			//the card needs to handle singed time from client
-
-			byte[] signature = r.getData();
-			//get time from Server
- 
-			//certificate handling
-			//the card needs to handle singed time from client
-			byte[] signedData = "SignedTime".getBytes("ASCII");
-			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, signedData); 
-			r = c.transmit(a); 
-			System.out.println("\nsigned Data - HEX: "+toHex(signedData));
-			// checkSW(response); 
-
-			signature = r.getData();
-			System.out.println();
-			System.out.printf("Signature from card: %s\n", toHex(signature));
+//			System.out.println(r);
+//			byte[] b =r.getData();
+//            byte[] slice = Arrays.copyOfRange(b, 6, b.length);
+//            String newnonce = new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
+//                
+//                System.err.println(newnonce);    
+//            
+//            
+//            
+//			String nonce =new String(b, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
+//			
+//			System.out.println(b.toString());
+//			System.out.println("\nnonce: "+(nonce));
+//			String timeResponse = TS.getTime(nonce);
+//			System.out.println("Recieved Time: " + timeResponse);
+//			System.out.println(timeResponse.getBytes("ASCII"));
+//			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, timeResponse.getBytes("ASCII")); 
+//			r = c.transmit(a); 
+//			
+//			//System.out.println("\nsigned Data - HEX: "+toHex(signedTime));
+//			// checkSW(response);
+//			
+//			//the card needs to handle singed time from client
+//
+//			byte[] signature = r.getData();
+//			//get time from Server
+// 
+//			//certificate handling
+//			//the card needs to handle singed time from client
+//			byte[] signedData = "SignedTime".getBytes("ASCII");
+//			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, signedData); 
+//			r = c.transmit(a); 
+//			System.out.println("\nsigned Data - HEX: "+toHex(signedData));
+//			// checkSW(response); 
+//
+//			signature = r.getData();
+//			System.out.println();
+//			System.out.printf("Signature from card: %s\n", toHex(signature));
             
 // get Serial#, example to get data from card
 			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_SERIAL_INS, 0x00, 0x00);
