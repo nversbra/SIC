@@ -172,13 +172,13 @@ public class Client {
 			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_SERIAL_INS, 0x00, 0x00);
 			r = c.transmit(a);
 //			
-			byte[] b = r.getData();
+			byte[] d = r.getData();
 			byte[] s = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
 			//check padding of data bytes, what are the extra bytes?
-			for(int i=6; i <b.length; i++){
-				s[i-6] = (byte)b[i];
+			for(int i=6; i <d.length; i++){
+				s[i-6] = (byte)d[i];
 			}
-			System.out.println(b.length);
+			System.out.println(d.length);
 			System.out.println(Arrays.toString(s));
 
 
@@ -201,8 +201,7 @@ public class Client {
 			System.out.println("\n------ end connection ------");
 			c.close();  // close the connection with the card
 		}
-	} 
-	//
+	}
 	
 //	public static Signature getSig(Signature){
 //		Signature signature = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1,false) ; //OR ALG_RSA_SHA_512_PKCS1

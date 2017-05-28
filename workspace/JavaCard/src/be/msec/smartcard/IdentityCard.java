@@ -109,6 +109,7 @@ public class IdentityCard extends Applet {
 		//create placeholder for personal information to be given per service provider
 		//4086 from tutorial, might be too long for this javacard but might work in jcwde
 //		info = new byte[4086];
+		getPubKey();
 		register();
 	}
 
@@ -174,9 +175,9 @@ public class IdentityCard extends Applet {
 			defDATA(apdu);
 			break;
 		//update time if validateTIME returnns true
-		case GET_TS_DATA:
-			TSDATA(apdu);
-			break;
+//		case GET_TS_DATA:
+//			TSDATA(apdu);
+//			break;
 		case GEN_NONCE:
 			genNonce(apdu);
 			break;
@@ -362,22 +363,56 @@ public class IdentityCard extends Applet {
 	}
 
 //timeStamp
-	private void TSDATA(APDU apdu){
-		//If the pin is not validated, a response APDU with the
-		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
-		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
-		else{
-		}
-		}
+//	private void TSDATA(APDU apdu){
+//		//If the pin is not validated, a response APDU with the
+//		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
+//		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+//		else{
+//			//generate nonce, an r.n.
+////			byte[] rn = new byte[3];
+////	        RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+////	        rand.generateData(rn, (short)0, (short)rn.length);
+//	        
+//			byte[] b = new byte[1];
+//	        RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+//	        rand.generateData(b, (short)0, (short)1);
+//	        //random number which can be used for nonce
+//	        byte rn = b[0];
+//	        
+//	        byte[] msg = new byte[nonce.length + 1]; //to be signed by private key
+//	        msg = concat(b, nonce);
+//	        
+//	        Signature rsasign = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
+//            Signature rsacheck = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
+//            //sign; here is where data is signed
+//            rsasign.init(privKey, rn);
+//            //get data to be signed
+//            rsasign
+////            
+////            rsasign.update(arg0, arg1, arg2);
+//		}
+//	}
 	
 	//generate keys
-	public PublicKey getPubKey(){
+	public void getPubKey(){
 		short keySize = 512;
 		KeyPair kp = new KeyPair(KeyPair.ALG_RSA, keySize);
 		kp.genKeyPair();
 		PrivateKey privKey = kp.getPrivate();
 		PublicKey pubKey = kp.getPublic();
-		return pubKey;
+		
+	}
+
+	//concatenating two arrays in two steps, noting that current setup, ar1.length = 1
+	private byte[] concat(byte[] ar1, byte[] ar2){
+		byte[] ar = new byte[ar1.length + ar2.length];
+		//step 1: copy bytes of first array into ar
+		for(short i = 0; i < ar1.length; i ++){
+			ar[i] = ar1[i];
+		}
+		//step 2: copy ar2 into remaining space in ar
+		Util.arrayCopy(ar, (short)ar1.length,ar2, (short)0, (short)ar.length);
+		return ar;
 	}
 	
 //	maybe for later if we have the time
