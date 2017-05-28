@@ -168,24 +168,32 @@ public class Client {
 			System.out.println();
 			System.out.printf("Signature from card: %s\n", toHex(signature));
             
-//// get Serial#, example to get data from card	
-//			r = c.transmit(a);
-//			System.out.println(r);
-//			//print response data array
-//			byte[] b =r.getData();
-//			String s = Arrays.toString(b);
-//			System.out.println("Serial#: "+ s);
-//
-//
-////eGov data
-//			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_eGov_DATA, 0x00, 0x00);
-//			r = c.transmit(a);
+// get Serial#, example to get data from card
+			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_SERIAL_INS, 0x00, 0x00);
+			r = c.transmit(a);
 //			
-//			//print response data array
-//			byte[] g =r.getData();
-//			for(int i=6; i <g.length; i++){
-//			System.out.print(new String(new byte[]{ (byte)r.getData() [i]}, "US-ASCII"));	
-//		}
+			byte[] b = r.getData();
+			byte[] s = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
+			//check padding of data bytes, what are the extra bytes?
+			for(int i=6; i <b.length; i++){
+				s[i-6] = (byte)b[i];
+			}
+			System.out.println(b.length);
+			System.out.println(Arrays.toString(s));
+
+
+//eGov data
+			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_eGov_DATA, 0x00, 0x00);
+			r = c.transmit(a);
+			
+			byte[] g =r.getData();
+			char[] h = new char[r.getNr()]; //number of data bytes in the response body
+			
+			for(int i=6; i <g.length; i++){
+			h[i-6] = (char)g[i]; //creating a variable able to be operated on
+			}
+			System.out.print("Gov Data: ");
+			System.out.println(h); //test implementation
 			
 	
 			}
