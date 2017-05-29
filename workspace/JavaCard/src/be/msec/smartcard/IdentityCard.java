@@ -96,6 +96,7 @@ public class IdentityCard extends Applet {
 //	private final static byte pubKey=(byte)0x29;
 	private static PublicKey pubKey;
 	private static PrivateKey privKey;
+	private static byte[] nonce;
 	
 	
 //	allocate all memory applet needs during its lifetime
@@ -115,7 +116,7 @@ public class IdentityCard extends Applet {
 		//info = new byte[4086];
 		
 		getPubKey(); //initialize javacard keys
-//		nonce = genNonceInstance((short)3); //simple nonce
+		nonce = genNonceInstance((short)3); //simple nonce
 		register();
 	}
 
@@ -177,9 +178,9 @@ public class IdentityCard extends Applet {
 			defDATA(apdu);
 			break;
 		//update time if validateTIME returnns true
-//		case GET_TS_DATA:
-//			TSDATA(apdu);
-//			break;
+		case GET_TS_DATA:
+			TSDATA(apdu);
+			break;
 			
 //		generate a nonce of size 'n' for each run	
 		case GEN_NONCE: 
@@ -362,35 +363,40 @@ public class IdentityCard extends Applet {
 	}
 
 //timeStamp
-//	private void TSDATA(APDU apdu){
-//		//If the pin is not validated, a response APDU with the
-//		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
-//		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
-//		else{
-//			//generate nonce, an r.n.
-////			byte[] rn = new byte[3];
-////	        RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
-////	        rand.generateData(rn, (short)0, (short)rn.length);
-//	        
-//			byte[] b = new byte[1];
-//	        RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
-//	        rand.generateData(b, (short)0, (short)1);
-//	        //random number which can be used for nonce
-//	        byte rn = b[0];
-//	        
-//	        byte[] msg = new byte[nonce.length + 1]; //to be signed by private key
-//	        msg = concat(b, nonce);
-//	        
-//	        Signature rsasign = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
-//            Signature rsacheck = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
-//            //sign; here is where data is signed
-//            rsasign.init(privKey, rn);
-//            //get data to be signed
-//            rsasign
-////            
-////            rsasign.update(arg0, arg1, arg2);
-//		}
-//	}
+	private void TSDATA(APDU apdu){
+		//If the pin is not validated, a response APDU with the
+		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
+		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+		else{
+			byte[] buffer = apdu.getBuffer();
+			short bytesRead = apdu.setIncomingAndReceive();
+			
+			short l = (short) (nonce.length + name.length);
+//			byte[] msg = new byte[l]; //to be signed by private key
+	        byte[] msg = concat(name, nonce);
+
+	        Signature rsasign = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
+            Signature rsacheck = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
+            //sign; here is where data is signed
+            rsasign.init(privKey, Signature.MODE_SIGN);
+            short len = rsasign.getLength();
+            //Accumulates a signature of the input data - get data to be signed
+//            rsasign.update(msg, (short)0, (short)msg.length);
+            
+            // number of bytes of signature output in output buffer
+            short signature = rsasign.sign(msg, (short)0, (short)msg.length, buffer, (short)0);
+   			
+            rsasign.update(buffer, (short)0, signature);
+            
+            apdu.setOutgoing();
+            apdu.setOutgoingLength(signature);
+            apdu.sendBytesLong(buffer, (short)0, signature);
+//   		   while (signature > 0) {
+//               rsasign.update(buffer, (short)0, (short) buffer.length);
+//               apdu.sendBytesLong(buffer, (short)0, (short)buffer.length);
+//           }
+		}
+	}
 	
 	//generate keys
 	public void getPubKey(){

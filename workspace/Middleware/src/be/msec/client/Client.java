@@ -27,7 +27,7 @@ public class Client {
 //	private final static byte GET_SN_DATA=(byte)0x07;
 //	private final static byte GET_def_DATA=(byte)0x08;
 	//	timestamp implementation to be discussed
-	//private final static byte GET_TS_DATA=(byte)0x09;
+	private final static byte GET_TS_DATA=(byte)0x09;
 	private static byte REQ_VALIDATION_INS=(byte)0x16;
 	
 	//individuals identified by a service-specific pseudonym
@@ -126,18 +126,34 @@ public class Client {
 			a = new CommandAPDU(IDENTITY_CARD_CLA, GEN_NONCE, 0x00, 0x00); 
 			r = c.transmit(a);
 			
-			
 			byte[] d1 = r.getData();
 			byte[] s1 = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
 			//check padding of data bytes, what are the extra bytes?
 			for(int i=6; i <d1.length; i++){
 				s1[i-6] = (byte)d1[i];
 			}
-			System.out.print("generate nonce instruction: ");
-			System.out.println("length of data array: " + d1.length);
+			System.out.println("generate nonce instruction: ");
 			System.out.println("Nonce: " + Arrays.toString(s1));
 			
-//			System.out.println(r);
+//TSDATA			
+			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_TS_DATA, 0x00, 0x00); 
+			r = c.transmit(a);
+			
+			byte[] d5 = r.getData();
+			byte[] s5 = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
+			//check padding of data bytes, what are the extra bytes?
+			for(int i=6; i <d5.length; i++){
+				s5[i-6] = (byte)d5[i];
+			}
+			System.out.println("TS Data instruction: ");
+			System.out.println("length of NONCE data array: " + r.getNr());
+			System.out.println("Nonce: " + Arrays.toString(s5));
+			System.out.println("Nonce lengthhhhhh getdata.length: " + r.getData().length);
+			
+			
+//			System.out.print("TSDATA: ");
+//			System.out.println(ty.length);
+//			System.out.println(ty);
 //			byte[] b =r.getData();
 //            byte[] slice = Arrays.copyOfRange(b, 6, b.length);
 //            String newnonce = new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
@@ -186,7 +202,7 @@ public class Client {
 			for(int i=6; i <d.length; i++){
 				s[i-6] = (byte)d[i];
 			}
-			System.out.println(d.length);
+			System.out.print("card serial#: ");
 			System.out.println(Arrays.toString(s));
 
 
