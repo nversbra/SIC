@@ -35,13 +35,16 @@ public class SSLServerThread extends Thread{
             while(true)
             {
                 PrintWriter out = new PrintWriter(sslSocket.getOutputStream(), true);
-                BufferedReader in = new BufferedReader(
-                        new InputStreamReader(
-                                sslSocket.getInputStream()));
+                DataInputStream in = new DataInputStream(sslSocket.getInputStream());
                 String inputLine, outputLine;
 
-                while ((inputLine = in.readLine()) != null) {
-                    String nonce = inputLine;
+                int length = in.readInt();                    // read length of incoming message
+                if(length>0) {
+                    byte[] nonce = new byte[length];
+                    in.readFully(nonce, 0, nonce.length); // read the message
+
+
+
                     String signature= null;
                     String ctime = get_time();
                     try {
@@ -84,13 +87,13 @@ public class SSLServerThread extends Thread{
 
 
 
-    public static String decrypt(String cipherText, PrivateKey privateKey) throws Exception {
-        byte[] bytes = Base64.getDecoder().decode(cipherText);
+    public static String decrypt(byte[] cipherText, PrivateKey privateKey) throws Exception {
+        //byte[] bytes = Base64.getDecoder().decode(cipherText);
 
         Cipher decriptCipher = Cipher.getInstance("RSA");
         decriptCipher.init(Cipher.DECRYPT_MODE, privateKey);
 
-        return new String(decriptCipher.doFinal(bytes), UTF_8);
+        return new String(decriptCipher.doFinal(cipherText), UTF_8);
     }
 
 

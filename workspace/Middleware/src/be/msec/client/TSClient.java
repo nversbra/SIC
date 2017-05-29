@@ -14,15 +14,15 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class TSClient {
 
-	 public String getTime(String nonce) throws Exception {
+	 public String getTime(byte[] nonce) throws Exception {
 		 String receivedtime = null;   
 		 try {
 	            PublicKey TSkey = getPubKeyFromKeyStore();
 	            System.setProperty("javax.net.ssl.trustStore", "clientKS.jks");
 	            System.setProperty("javax.net.ssl.trustStorePassword", "SICKS");
-	            String strServerName = "localhost"; // SSL Server Name
+	            String strServerName = "mini"; // SSL Server Name
 	            int intSSLport = 4443; // Port where the SSL Server is listening
-	            PrintWriter out = null;
+	            DataOutputStream out = null;
 	            BufferedReader in = null;
 
 
@@ -32,7 +32,7 @@ public class TSClient {
 	                SSLSocket sslSocket = (SSLSocket) sslsocketfactory.createSocket(strServerName, intSSLport);
 
 	                // Initializing the streams for Communication with the Server
-	                out = new PrintWriter(sslSocket.getOutputStream(), true);
+	                out = new DataOutputStream(sslSocket.getOutputStream());
 	                in = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
 
 	                BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
@@ -40,9 +40,12 @@ public class TSClient {
 	                String ctime = "";
 	               
 	                
-	                    String enc_nonce = encrypt(nonce,TSkey);
+	                    //String enc_nonce = encrypt(nonce,TSkey);
 	                    //out.println(enc_nonce);
-	                    out.println(nonce);
+	                    //System.out.println(nonce);
+	                	out.writeInt(nonce.length);
+	                	out.write(nonce);
+	            
 	                    String response = in.readLine();
 	                    receivedtime = response;
 	                    //System.out.println(response);

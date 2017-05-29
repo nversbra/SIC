@@ -132,17 +132,18 @@ public class Client {
             
             
             byte[] slice = Arrays.copyOfRange(b, 6, b.length);
-            String newnonce =new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
+            String nonce =new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
                 
-                System.err.println( newnonce);    
+                System.err.println( nonce);    
             
             
             
-			String nonce =new String(b, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
 			
+                
+            String timeResponse = TS.getTime(slice);
 			System.out.println(b.toString());
 			System.out.println("\nnonce: "+(nonce));
-			String timeResponse = TS.getTime(nonce);
+			//String timeResponse = TS.getTime(nonce);
 			System.out.println("Recieved Time: " + timeResponse);
 			System.out.println(timeResponse.getBytes("ASCII"));
 			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, timeResponse.getBytes("ASCII")); 
