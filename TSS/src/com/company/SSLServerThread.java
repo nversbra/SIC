@@ -4,6 +4,8 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.net.ssl.SSLSocket;
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.text.SimpleDateFormat;
 import java.util.Base64;
@@ -34,7 +36,8 @@ public class SSLServerThread extends Thread{
             // Create Input / Output Streams for communication with the client
             while(true)
             {
-                PrintWriter out = new PrintWriter(sslSocket.getOutputStream(), true);
+
+                DataOutputStream out = new DataOutputStream(sslSocket.getOutputStream());
                 DataInputStream in = new DataInputStream(sslSocket.getInputStream());
                 String inputLine, outputLine;
 
@@ -49,11 +52,51 @@ public class SSLServerThread extends Thread{
                     String ctime = get_time();
                     try {
                         String dec_nonce = decrypt(nonce,TSKey.getPrivate());
-                        signature = sign(dec_nonce + ctime, TSKey.getPrivate());
-                        out.println(ctime +" "+ signature);
+                        byte[] bnonce = dec_nonce.getBytes(StandardCharsets.US_ASCII);
+                        String DatePart = ctime;
+                        String[] splittedDate = DatePart.split("-");
+                        short day = Short.parseShort(splittedDate[0]);
+                        short month = Short.parseShort(splittedDate[1]);
+                        String milenium = splittedDate[2].substring(0, 2);
+                        String decenium = splittedDate[2].substring(2, 4);
+                        short mil = Short.parseShort(milenium);
+                        short dec = Short.parseShort(decenium);
+                        ByteBuffer buffer = ByteBuffer.allocate(bnonce.length + 8);
+                        int nonce_length = bnonce.length;
+                        buffer.put(bnonce);
+                        buffer.position(nonce_length);
+                        buffer.putShort(day);
+                        buffer.position(nonce_length+2);
+                        buffer.putShort(month);
+                        buffer.position(nonce_length+4);
+                        buffer.putShort(mil);
+                        buffer.position(nonce_length+6);
+                        buffer.putShort(dec);
+                        buffer.position(0);
+                        byte[] timeR = new byte[buffer.remaining()];
+                        buffer.get(timeR);
+                        byte[] bytesignature = signBytes(timeR, TSKey.getPrivate());
+                        ByteBuffer Respbuffer = ByteBuffer.allocate(bytesignature.length + 8);
+                        Respbuffer.putShort(day);
+                        Respbuffer.position(2);
+                        Respbuffer.putShort(month);
+                        Respbuffer.position(4);
+                        Respbuffer.putShort(mil);
+                        Respbuffer.position(6);
+                        Respbuffer.putShort(dec);
+                        Respbuffer.position(8);
+                        Respbuffer.put(bytesignature);
+                        Respbuffer.position(0);
+
+                        byte[] Response = new byte[Respbuffer.remaining()];
+                        Respbuffer.get(Response);
+                        //out.write();
+                        out.writeInt(Response.length);
+                        out.write(Response);
+
                     } catch (BadPaddingException e) {
                         signature = "Bad padding";
-                        out.println(signature);
+                        out.write(0);
                     }
                 }
 
@@ -105,6 +148,17 @@ public class SSLServerThread extends Thread{
         byte[] signature = privateSignature.sign();
 
         return Base64.getEncoder().encodeToString(signature);
+    }
+
+
+    private static byte[] signBytes(byte[] plainText, PrivateKey privateKey) throws Exception {
+        Signature privateSignature = Signature.getInstance("SHA1withRSA");
+        privateSignature.initSign(privateKey);
+        privateSignature.update(plainText);
+
+        byte[] signature = privateSignature.sign();
+
+        return signature;
     }
 
 

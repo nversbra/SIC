@@ -14,8 +14,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class TSClient {
 
-	 public String getTime(byte[] nonce) throws Exception {
-		 String receivedtime = null;   
+	 public byte[] getTime(byte[] nonce) throws Exception {
+		 byte[] response = null;   
 		 try {
 	            PublicKey TSkey = getPubKeyFromKeyStore();
 	            System.setProperty("javax.net.ssl.trustStore", "clientKS.jks");
@@ -23,7 +23,7 @@ public class TSClient {
 	            String strServerName = "mini"; // SSL Server Name
 	            int intSSLport = 4443; // Port where the SSL Server is listening
 	            DataOutputStream out = null;
-	            BufferedReader in = null;
+	            DataInputStream in = null;
 
 
 	            try {
@@ -33,9 +33,9 @@ public class TSClient {
 
 	                // Initializing the streams for Communication with the Server
 	                out = new DataOutputStream(sslSocket.getOutputStream());
-	                in = new BufferedReader(new InputStreamReader(sslSocket.getInputStream()));
+	                in = new DataInputStream(sslSocket.getInputStream());
 
-	                BufferedReader stdIn = new BufferedReader(new InputStreamReader(System.in));
+	               
 	                String userInput;
 	                String ctime = "";
 	               
@@ -46,15 +46,14 @@ public class TSClient {
 	                	out.writeInt(nonce.length);
 	                	out.write(nonce);
 	            
-	                    String response = in.readLine();
-	                    receivedtime = response;
-	                    //System.out.println(response);
-	                    String[] parts = response.split(" ");
-	                    ctime = parts[0]; // date
-	                    String signature = parts[1]; // signed nonce + date
-	                    Boolean isCorrect = verify(nonce + ctime, signature, TSkey);
-	                    System.out.println(ctime);
-	                    System.out.println("verified: "+ isCorrect);
+	                    int length = in.readInt();                    // read length of incoming message
+	                    if(length>0) {
+	                    response = new byte[length];
+	                    in.readFully(response, 0, response.length); // read the message
+	                    
+	                    
+	               
+	                    
 	                
 	                
 
@@ -63,9 +62,15 @@ public class TSClient {
 	                // Closing the Streams and the Socket
 	                out.close();
 	                in.close();
-	                stdIn.close();
 	                sslSocket.close();
-	                return receivedtime;
+	                return response;}
+	                    
+	                    else {
+	                    	out.close();
+	    	                in.close();
+	    	                sslSocket.close();
+							throw new Exception("No response from TSS");
+						}
 	            } catch (Exception exp) {
 	                System.out.println(" Exception occurred .... " + exp);
 	                exp.printStackTrace();
@@ -75,7 +80,7 @@ public class TSClient {
 	            System.out.println(" Exception occurred .... " + exp);
 	            exp.printStackTrace();
 	        }
-			return receivedtime;
+			return response;
 	    }
 
 	    private static PublicKey getPubKeyFromKeyStore() throws Exception {

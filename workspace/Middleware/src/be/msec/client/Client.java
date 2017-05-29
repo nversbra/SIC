@@ -6,14 +6,17 @@ import be.msec.client.connection.SimulatedConnection;
 import java.util.Arrays;
 import javax.smartcardio.*;
 import java.io.*;
+import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.*;
+import java.text.DateFormatSymbols;
 
 
 public class Client {
 
 	private final static byte IDENTITY_CARD_CLA =(byte)0x80;
 	private static final byte VALIDATE_PIN_INS = 0x22;
+	private static final byte VALIDATE_TIME_INS = 0x25;
 	private static final byte GEN_NONCE = 0x20;
 	private final static short SW_VERIFICATION_FAILED = 0x6300;
 	private static final short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
@@ -140,13 +143,14 @@ public class Client {
             
 			
                 
-            String timeResponse = TS.getTime(slice);
+            byte[] timeResponse = TS.getTime(slice);
+            
 			System.out.println(b.toString());
 			System.out.println("\nnonce: "+(nonce));
 			//String timeResponse = TS.getTime(nonce);
 			System.out.println("Recieved Time: " + timeResponse);
-			System.out.println(timeResponse.getBytes("ASCII"));
-			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, timeResponse.getBytes("ASCII")); 
+			System.out.println(timeResponse);
+			a = new CommandAPDU(IDENTITY_CARD_CLA, VALIDATE_TIME_INS, 0x00, 0x00, timeResponse); 
 			r = c.transmit(a); 
 			
 			//System.out.println("\nsigned Data - HEX: "+toHex(signedTime));

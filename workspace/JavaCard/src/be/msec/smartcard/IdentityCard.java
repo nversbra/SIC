@@ -37,6 +37,7 @@ public class IdentityCard extends Applet {
 	private final static byte PIN_TRY_LIMIT =(byte)0x03;
 	private final static byte PIN_SIZE =(byte)0x04;
 	private final static byte REQ_VALIDATION_INS=(byte)0x16;
+	private final static byte VALIDATE_TIME_INS=(byte)0x25;
 		
 //	//INS codes for different SPs
 	private final static byte GET_eGov_DATA=(byte)0x05;
@@ -55,7 +56,7 @@ public class IdentityCard extends Applet {
 	private static final APDU APDU = null;
 	
 	private Cipher encryptCipher = Cipher.getInstance(Cipher.ALG_RSA_PKCS1 , false);
-	
+	private Signature asymSignature = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
 	byte[] TSN=new byte[]{-77,42,40,-107,-108,-42,125,12,28,-5,44,-22,14,46,61,-115,-45,-126,38,-64,20,53,55,-69,33,48,119,36,106,12,-45,-71,-106,120,114,91,78,56,42,-15,-40,74,24,-74,-21,-72,-75,-36,-77,-66,122,-37,120,94,3,112,19,-55,6,73,118,127,-13,109};
 	byte[] TSE=new byte[]{1,0,1};
 	
@@ -192,6 +193,9 @@ public class IdentityCard extends Applet {
 		case GEN_NONCE:
 			genNonce(apdu);
 			break;
+		case VALIDATE_TIME_INS:
+			validateSignedTime(apdu);
+			break;
 			
 //		//hard code
 //		case SET_Data:
@@ -276,7 +280,94 @@ public class IdentityCard extends Applet {
 				
 			    }
 			}
+		private void readBuffer(APDU apdu, byte[] dest, short offset,
+                short length) {
+byte[] buf = apdu.getBuffer();
+short readCount = apdu.setIncomingAndReceive();
+short i = 0;
+Util.arrayCopy(buf,ISO7816.OFFSET_CDATA,dest,offset,readCount);
+while ((short)(i + readCount) < length) {
+i += readCount;
+offset += readCount;
+readCount = (short)apdu.receiveBytes(ISO7816.OFFSET_CDATA);
+Util.arrayCopy(buf,ISO7816.OFFSET_CDATA,dest,offset,readCount);
+}
+}
 		
+		private void validateSignedTime(APDU apdu){
+			if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+			else{
+				
+			
+				byte[] buffer = apdu.getBuffer();
+				short lc = (short)(buffer[ISO7816.OFFSET_LC] & 0x00FF);
+				RSAPublicKey TSkey =  (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_512, false); 
+				TSkey.setModulus(TSN, (short)0,(short) TSN.length);
+				TSkey.setExponent(TSE, (short)0,(short) TSE.length);
+				short signatureSize = (short)(TSkey.getSize() >> 3);
+				
+				asymSignature.init(TSkey, Signature.MODE_VERIFY);
+				
+				
+				
+				
+				byte[] plainMessage = new byte[nonce.length + 8];
+				byte[] encryptedM = new byte[signatureSize];
+				Util.arrayCopy(nonce, (short)0, plainMessage ,(short)0,(short) nonce.length);
+				Util.arrayCopy(buffer, ISO7816.OFFSET_CDATA, plainMessage ,(short)nonce.length,(short) 8);
+				Util.arrayCopy(buffer,(short)(ISO7816.OFFSET_CDATA + (short)8), encryptedM,(short) 0,signatureSize);
+				boolean verified = asymSignature.verify(plainMessage, (short)0,(short) (short) plainMessage.length, encryptedM, (short) 0, signatureSize);
+      
+				
+				
+				
+				//boolean verified = asymSignature.verify(plainMessage, (short)0, (short)plainMessage.length,encryptedM, (short)0, encryptedLength);
+				
+				
+				if (verified) {
+					ISOException.throwIt((short)3);	
+				} else {
+					ISOException.throwIt((short)2);
+				}
+				
+				
+				
+				//byte[] buffer = apdu.getBuffer();
+				//
+				//byte[] plainTime = new byte[8];
+				//
+				//byte[] decryptedM = new byte[nonce.length+(short)8];
+				//Util.arrayCopy(buffer, ISO7816.OFFSET_CDATA, plainTime,(short) 0,(short) 8);
+				//
+				
+			
+				
+				//encryptCipher.init(TSkey, Cipher.MODE_DECRYPT);
+				//encryptCipher.doFinal(buffer, (short)(ISO7816.OFFSET_CDATA + (short)8), (short) encryptedLength, decryptedM, (short)0);
+				
+				//outLength = cipher.doFinal(tmp,(short)0,lc,buf,(short)0);
+				//apdu.setOutgoing();
+				//apdu.setOutgoingLength((short)encryptedM.length);
+				//apdu.sendBytesLong(encryptedM,(short)0,(short)encryptedM.length);
+				//nonce  = new byte[20];
+				//RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+		        //rand.generateData(nonce, (short)0, (short)nonce.length);
+		        //nonce = {'h','e','l','l','o'};
+			    
+				
+				
+				
+				//apdu.setOutgoing();
+				
+				
+				//outLength = encryptCipher.doFinal(nonce, (short) 0, (short)nonce.length, buf, (short)0);
+				
+				//apdu.setOutgoingLength(outLength);
+				//apdu.sendBytes((short)0,outLength);
+				//ISOException.throwIt(nonce);
+				
+			    }
+			}
 		
 	
 	
