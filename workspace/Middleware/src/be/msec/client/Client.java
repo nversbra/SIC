@@ -4,12 +4,15 @@ import be.msec.client.connection.Connection;
 import be.msec.client.connection.IConnection;
 import be.msec.client.connection.SimulatedConnection;
 import java.util.Arrays;
+import java.util.Calendar;
+
 import javax.smartcardio.*;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.*;
 import java.text.DateFormatSymbols;
+import java.text.SimpleDateFormat;
 
 
 public class Client {
@@ -17,9 +20,11 @@ public class Client {
 	private final static byte IDENTITY_CARD_CLA =(byte)0x80;
 	private static final byte VALIDATE_PIN_INS = 0x22;
 	private static final byte VALIDATE_TIME_INS = 0x25;
+	private static final byte UPDATE_LOCAL_TIME_INS = 0x31;
 	private static final byte GEN_NONCE = 0x20;
 	private final static short SW_VERIFICATION_FAILED = 0x6300;
 	private static final short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
+	private static final short TIME_UPDATE_REQUIRED = 0x6302;
 	private static final int  SUCCESS_RESPONS = 36864;
 	
 	private final static byte GET_SERIAL_INS= 0x24;
@@ -121,37 +126,81 @@ public class Client {
 			System.out.println("PIN Verified");
 			
 			
-//Send time to card, receive boolean
+			
+			String timeStamp = new SimpleDateFormat("HH mm dd MM yyyy").format(Calendar.getInstance().getTime());
+			String DatePart = timeStamp;
+            String[] splittedDate = DatePart.split(" ");
+            short hour = Short.parseShort(splittedDate[0]);
+            short minute = Short.parseShort(splittedDate[1]);
+            short day = Short.parseShort(splittedDate[2]);
+            short month = Short.parseShort(splittedDate[3]);
+            String milenium = splittedDate[4].substring(0, 2);
+            String decenium = splittedDate[4].substring(2, 4);
+            short mil = Short.parseShort(milenium);
+            short dec = Short.parseShort(decenium);
+            
+			ByteBuffer Respbuffer = ByteBuffer.allocate(12);
+            Respbuffer.putShort(hour);
+            Respbuffer.position(2);
+            Respbuffer.putShort(minute);
+            Respbuffer.position(4);
+            Respbuffer.putShort(day);
+            Respbuffer.position(6);
+            Respbuffer.putShort(month);
+            Respbuffer.position(8);
+            Respbuffer.putShort(mil);
+            Respbuffer.position(10);
+            Respbuffer.putShort(dec);
+            Respbuffer.position(0);
+            byte[] Response = new byte[Respbuffer.remaining()];
+            Respbuffer.get(Response);
+            
+			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, Response);
+			r = c.transmit(a); 
+			System.out.println(r);
+			
+			if (r.getSW()==TIME_UPDATE_REQUIRED){
+				a = new CommandAPDU(IDENTITY_CARD_CLA, GEN_NONCE, 0x00, 0x00); 
+				r = c.transmit(a); 
+				System.out.println(r);
+				byte[] b =r.getData();
+				
+			
+	            
+	            
+	            byte[] slice = Arrays.copyOfRange(b, 6, b.length);
+	            String nonce =new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
+	            
+	            byte[] timeResponse = TS.getTime(slice);
+	            
+				System.out.println(b.toString());
+				System.out.println("\nnonce: "+(nonce));
+				//String timeResponse = TS.getTime(nonce);
+				System.out.println("Recieved Time: " + timeResponse);
+				System.out.println(timeResponse);
+				a = new CommandAPDU(IDENTITY_CARD_CLA, VALIDATE_TIME_INS, 0x00, 0x00, timeResponse); 
+				r = c.transmit(a); 
+				System.out.println(r);
+				if (r.getSW()==SUCCESS_RESPONS){
+					System.out.println("Succesfully updated validated time on ID");
+				}
+	                
+			}
+				
+				
+			//Send time to card, receive boolean
 			//In progress...
 			//first step to get signed time from G then pass it along
 			//SSLServerThread st = new SSLServerThread();//tried this but...
 			
-			a = new CommandAPDU(IDENTITY_CARD_CLA, GEN_NONCE, 0x00, 0x00); 
-			r = c.transmit(a); 
-			System.out.println(r);
-			byte[] b =r.getData();
 			
-		
-            
-            
-            byte[] slice = Arrays.copyOfRange(b, 6, b.length);
-            String nonce =new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
-                
-                System.err.println( nonce);    
+                 
             
             
             
 			
                 
-            byte[] timeResponse = TS.getTime(slice);
             
-			System.out.println(b.toString());
-			System.out.println("\nnonce: "+(nonce));
-			//String timeResponse = TS.getTime(nonce);
-			System.out.println("Recieved Time: " + timeResponse);
-			System.out.println(timeResponse);
-			a = new CommandAPDU(IDENTITY_CARD_CLA, VALIDATE_TIME_INS, 0x00, 0x00, timeResponse); 
-			r = c.transmit(a); 
 			
 			//System.out.println("\nsigned Data - HEX: "+toHex(signedTime));
 			// checkSW(response);

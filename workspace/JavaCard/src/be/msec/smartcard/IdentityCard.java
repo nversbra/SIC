@@ -38,6 +38,7 @@ public class IdentityCard extends Applet {
 	private final static byte PIN_SIZE =(byte)0x04;
 	private final static byte REQ_VALIDATION_INS=(byte)0x16;
 	private final static byte VALIDATE_TIME_INS=(byte)0x25;
+	private final static byte UPDATE_LOCAL_TIME_INS=(byte)0x31;
 		
 //	//INS codes for different SPs
 	private final static byte GET_eGov_DATA=(byte)0x05;
@@ -52,7 +53,9 @@ public class IdentityCard extends Applet {
 	
 	private final static short SW_VERIFICATION_FAILED = 0x6300;
 	private final static short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
-
+	private final static short TIME_UPDATE_REQUIRED = 0x6302;
+	
+	
 	private static final APDU APDU = null;
 	
 	private Cipher encryptCipher = Cipher.getInstance(Cipher.ALG_RSA_PKCS1 , false);
@@ -93,9 +96,10 @@ public class IdentityCard extends Applet {
 
 	
 //	data for certification and encryption/decryption, time needed for cert verification
-	private byte[] lastValidationTime = new byte[11]; //time format: "yyyy-D HH:mm:ss"
+	private byte[] lastValidationTime = new byte[]{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; //time format: "yyyy-D HH:mm:ss"
 	private byte[] currentTime = new byte[11];
 	private byte[] nonce  = new byte[]{(byte)'H',(byte)'E',(byte)'L',(byte)'L',(byte)'O'};
+	private byte[] verifiedTime = new byte[12];
 //	private final static byte CertC0=(byte)0x20;	//common cert
 //	private final static byte SKC0=(byte)0x21;
 //	private final static byte CertCA=(byte)0x22;	//CA
@@ -196,6 +200,11 @@ public class IdentityCard extends Applet {
 		case VALIDATE_TIME_INS:
 			validateSignedTime(apdu);
 			break;
+		case UPDATE_LOCAL_TIME_INS:
+			updateLocalTime(apdu);
+			break;
+			
+			
 			
 //		//hard code
 //		case SET_Data:
@@ -280,20 +289,7 @@ public class IdentityCard extends Applet {
 				
 			    }
 			}
-		private void readBuffer(APDU apdu, byte[] dest, short offset,
-                short length) {
-byte[] buf = apdu.getBuffer();
-short readCount = apdu.setIncomingAndReceive();
-short i = 0;
-Util.arrayCopy(buf,ISO7816.OFFSET_CDATA,dest,offset,readCount);
-while ((short)(i + readCount) < length) {
-i += readCount;
-offset += readCount;
-readCount = (short)apdu.receiveBytes(ISO7816.OFFSET_CDATA);
-Util.arrayCopy(buf,ISO7816.OFFSET_CDATA,dest,offset,readCount);
-}
-}
-		
+
 		private void validateSignedTime(APDU apdu){
 			if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
 			else{
@@ -308,93 +304,89 @@ Util.arrayCopy(buf,ISO7816.OFFSET_CDATA,dest,offset,readCount);
 				
 				asymSignature.init(TSkey, Signature.MODE_VERIFY);
 				
-				
-				
-				
-				byte[] plainMessage = new byte[nonce.length + 8];
+				byte[] plainMessage = new byte[nonce.length + 12];
 				byte[] encryptedM = new byte[signatureSize];
 				Util.arrayCopy(nonce, (short)0, plainMessage ,(short)0,(short) nonce.length);
-				Util.arrayCopy(buffer, ISO7816.OFFSET_CDATA, plainMessage ,(short)nonce.length,(short) 8);
-				Util.arrayCopy(buffer,(short)(ISO7816.OFFSET_CDATA + (short)8), encryptedM,(short) 0,signatureSize);
+				Util.arrayCopy(buffer, ISO7816.OFFSET_CDATA, plainMessage ,(short)nonce.length,(short) 12);
+				Util.arrayCopy(buffer,(short)(ISO7816.OFFSET_CDATA + (short)12), encryptedM,(short) 0,signatureSize);
 				boolean verified = asymSignature.verify(plainMessage, (short)0,(short) (short) plainMessage.length, encryptedM, (short) 0, signatureSize);
       
-				
-				
-				
-				//boolean verified = asymSignature.verify(plainMessage, (short)0, (short)plainMessage.length,encryptedM, (short)0, encryptedLength);
-				
-				
 				if (verified) {
-					ISOException.throwIt((short)3);	
+					Util.arrayCopy(plainMessage, (short)nonce.length, verifiedTime ,(short)0,(short) 12);
 				} else {
 					ISOException.throwIt((short)2);
 				}
-				
-				
-				
-				//byte[] buffer = apdu.getBuffer();
-				//
-				//byte[] plainTime = new byte[8];
-				//
-				//byte[] decryptedM = new byte[nonce.length+(short)8];
-				//Util.arrayCopy(buffer, ISO7816.OFFSET_CDATA, plainTime,(short) 0,(short) 8);
-				//
-				
-			
-				
-				//encryptCipher.init(TSkey, Cipher.MODE_DECRYPT);
-				//encryptCipher.doFinal(buffer, (short)(ISO7816.OFFSET_CDATA + (short)8), (short) encryptedLength, decryptedM, (short)0);
-				
-				//outLength = cipher.doFinal(tmp,(short)0,lc,buf,(short)0);
-				//apdu.setOutgoing();
-				//apdu.setOutgoingLength((short)encryptedM.length);
-				//apdu.sendBytesLong(encryptedM,(short)0,(short)encryptedM.length);
-				//nonce  = new byte[20];
-				//RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
-		        //rand.generateData(nonce, (short)0, (short)nonce.length);
-		        //nonce = {'h','e','l','l','o'};
-			    
-				
-				
-				
-				//apdu.setOutgoing();
-				
-				
-				//outLength = encryptCipher.doFinal(nonce, (short) 0, (short)nonce.length, buf, (short)0);
-				
-				//apdu.setOutgoingLength(outLength);
-				//apdu.sendBytes((short)0,outLength);
-				//ISOException.throwIt(nonce);
-				
 			    }
 			}
 		
 	
-	
+		
+		
+		
+		private void updateLocalTime(APDU apdu){
+			if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+			else{
+				
+			
+				byte[] buffer = apdu.getBuffer();
+				short lc = (short)(buffer[ISO7816.OFFSET_LC] & 0x00FF);
+			
+				
+				byte[] Time = new byte[8];
+				
+				
+				Util.arrayCopy(buffer, ISO7816.OFFSET_CDATA, Time ,(short)0,(short) 8);
+				
+       
+				if (true) {
+					Util.arrayCopy(Time, (short)0, verifiedTime ,(short)0,(short) 8);
+				} else {
+					ISOException.throwIt((short)2);
+				}
+				
+			    }
+			}
+		
 	//receive signed time from SP through Client; update card time if client time more recent 
 	private boolean reqRevalidation(APDU apdu){
 		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
 		else{
+			
+			
 			byte[] buffer = apdu.getBuffer();
-			byte[] newBuff = new byte[11];   // contains currentTime   
-			//read apdu time data sent from Client
-			//verify time validity from G server through middleware 
-			short srcOff = (short) 9;
-			short destOff = (short) 0;
-			short length = (short) 11;
-			//currentTime =
-			Util.arrayCopy(buffer, srcOff, newBuff, destOff, length);
-			//within same year, for completeness, 
-			if(lastValidationTime != null && Util.arrayCompare(lastValidationTime, (short)0, newBuff, (short)0, (short)4)==0){
-				//check if within 24 hours, same day of year
-				if((short)(lastValidationTime[4]-currentTime[4])>1&&(short)(lastValidationTime[5]+currentTime[5])<2){
-				return true;
-				}
-			}
-			else{
-				return false;// not within 24 hours or same year or lastValidationTime is null
-			}
-		} return false;
+			
+		
+			
+			byte[] Time = new byte[12];
+			
+			
+			Util.arrayCopy(buffer, ISO7816.OFFSET_CDATA, Time ,(short)0,(short) 12);
+			
+			
+			short lhour = Util.makeShort(Time[0], Time[1]);
+			short lmin = Util.makeShort(Time[2], Time[3]);
+			short lday = Util.makeShort(Time[4], Time[5]);
+			short lmonth = Util.makeShort(Time[6], Time[7]);
+			short lmil = Util.makeShort(Time[8], Time[9]);
+			short ldec = Util.makeShort(Time[10], Time[11]);
+			
+			
+			short chour = Util.makeShort(lastValidationTime[0], lastValidationTime[1]);
+			short cmin = Util.makeShort(lastValidationTime[2], lastValidationTime[3]);
+			short cday = Util.makeShort(lastValidationTime[4], lastValidationTime[5]);
+			short cmonth = Util.makeShort(lastValidationTime[6], lastValidationTime[7]);
+			short cmil = Util.makeShort(lastValidationTime[8], lastValidationTime[9]);
+			short cdec = Util.makeShort(lastValidationTime[10], lastValidationTime[11]);
+			
+			
+			short delta = 1;
+			
+			if (cmil<lmil || cdec<cmil || cmonth < lmonth || cday < lday || chour < lhour-delta)  {
+				ISOException.throwIt(TIME_UPDATE_REQUIRED);
+			} 
+			return true;}
+		ISOException.throwIt(TIME_UPDATE_REQUIRED);
+	return false;	
 	}
 		
 // 20 byte challenge
