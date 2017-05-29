@@ -8,6 +8,8 @@ import javax.smartcardio.*;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.security.*;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 
 
 public class Client {
@@ -29,6 +31,9 @@ public class Client {
 	//	timestamp implementation to be discussed
 	private final static byte GET_TS_DATA=(byte)0x09;
 	private static byte REQ_VALIDATION_INS=(byte)0x16;
+	private final static byte GET_pubKey=(byte)0x19;
+	private final static byte GET_Exponent=(byte)0x17;
+	private final static byte GET_Modulus=(byte)0x18;
 	
 	//individuals identified by a service-specific pseudonym
 	private  byte[] nym_Gov = new byte[]{0x11}; // to have something to test data saving on javacard
@@ -119,44 +124,66 @@ public class Client {
 			
 			
 //Send time to card, receive boolean
+			//TS in another branch
 			//In progress...
 			//first step to get signed time from G then pass it along
 			//SSLServerThread st = new SSLServerThread();//tried this but...
+//			a = new CommandAPDU(IDENTITY_CARD_CLA, GEN_NONCE, 0x00, 0x00); 
+//			r = c.transmit(a);
+//			byte[] d1 = r.getData();
+//			byte[] s1 = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
+//			//check padding of data bytes, what are the extra bytes?
+//			for(int i=6; i <d1.length; i++){
+//				s1[i-6] = (byte)d1[i];
+//			}
+//			System.out.println("generate nonce instruction: ");
+//			System.out.println("Nonce: " + Arrays.toString(s1));
 			
-			a = new CommandAPDU(IDENTITY_CARD_CLA, GEN_NONCE, 0x00, 0x00); 
+//Cert
+			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_Exponent, 0x00, 0x00,new byte[]{0x01,0x02,0x03,0x04});
 			r = c.transmit(a);
+
+			CertificateFactory certFac = CertificateFactory.getInstance("X.509");
+			byte[] encodedCert = null; //Get from TS
+			InputStream is = new ByteArrayInputStream (encodedCert);
+			X509Certificate cert = (X509Certificate) certFac.generateCertificate(is);
+			is.close();
 			
-			byte[] d1 = r.getData();
-			byte[] s1 = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
-			//check padding of data bytes, what are the extra bytes?
-			for(int i=6; i <d1.length; i++){
-				s1[i-6] = (byte)d1[i];
-			}
-			System.out.println("generate nonce instruction: ");
-			System.out.println("Nonce: " + Arrays.toString(s1));
+			System.out.println(r);
+			if (r.getSW()==SW_VERIFICATION_FAILED) throw new Exception("PIN INVALID");
+			else if(r.getSW()!=SUCCESS_RESPONS ) throw new Exception("Exception on the card: " + r.getSW());
+			System.out.println("PIN Verified");
+
+			
+			
+////get public key
+//			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_pubKey, 0x00, 0x00); 
+//			r = c.transmit(a);
+//			
+//			System.out.println("get pubKey: Instruction NEW: " + Arrays.toString(r.getData()));
+//			System.out.println("pubKey size: : " + r.getNr());
 			
 //TSDATA			
-			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_TS_DATA, 0x00, 0x00); 
-			r = c.transmit(a);
-			
-			byte[] d5 = r.getData();
-			byte[] s5 = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
-			//check padding of data bytes, what are the extra bytes?
-			for(int i=6; i <d5.length; i++){
-				s5[i-6] = (byte)d5[i];
-			}
-			System.out.println("TS Data instruction: ");
-			System.out.println("length of NONCE data array: " + r.getNr());
-			System.out.println("Nonce: " + Arrays.toString(s5));
-			System.out.println("Nonce lengthhhhhh getdata.length: " + r.getData().length);
-			
-			
+//			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_TS_DATA, 0x00, 0x00); 
+//			r = c.transmit(a);
+//			
+//			byte[] d5 = r.getData();
+//			byte[] s5 = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
+//			//check padding of data bytes, what are the extra bytes?
+//			for(int i=6; i <d5.length; i++){
+//				s5[i-6] = (byte)d5[i];
+//			}
+//			System.out.println("TS Data instruction: ");
+//			System.out.println("length of NONCE data array: " + r.getNr());
+//			System.out.println("Nonce: " + Arrays.toString(s5));
+//			System.out.println("Nonce length getdata.length: " + r.getData().length);
+//			
 //			System.out.print("TSDATA: ");
 //			System.out.println(ty.length);
 //			System.out.println(ty);
 //			byte[] b =r.getData();
-//            byte[] slice = Arrays.copyOfRange(b, 6, b.length);
-//            String newnonce = new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
+//          byte[] slice = Arrays.copyOfRange(b, 6, b.length);
+//          String newnonce = new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
 //                
 //                System.err.println(newnonce);    
 //            
@@ -183,6 +210,7 @@ public class Client {
 //			//certificate handling
 //			//the card needs to handle singed time from client
 //			byte[] signedData = "SignedTime".getBytes("ASCII");
+//Req Validation
 //			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, signedData); 
 //			r = c.transmit(a); 
 //			System.out.println("\nsigned Data - HEX: "+toHex(signedData));

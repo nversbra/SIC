@@ -16,9 +16,13 @@ import javacard.framework.APDU;
 import javacard.framework.Applet;
 import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
+import javacard.framework.JCSystem;
 import javacard.framework.OwnerPIN;
 import javacard.security.*;
 import javacard.framework.Util;
+import javax.crypto.Cipher;
+//import javacardx.crypto.Cipher;
+
 
 //// in client not card
 //import javacard.security.*;
@@ -45,7 +49,9 @@ public class IdentityCard extends Applet {
 	private final static byte GET_TS_DATA=(byte)0x09; //timestamp
 	private final static byte SET_Data=(byte)0x10;
 	private final static byte Set_PIN=(byte)0x15;
-	//	private byte reqTime=(byte)0x17;
+	private final static byte GET_pubKey=(byte)0x19;
+	private final static byte GET_Exponent=(byte)0x17;
+	private final static byte GET_Modulus=(byte)0x18;
 	
 	private final static short SW_VERIFICATION_FAILED = 0x6300;
 	private final static short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
@@ -115,7 +121,7 @@ public class IdentityCard extends Applet {
 		//4086 from tutorial, might be too long for this javacard but might work in jcwde
 		//info = new byte[4086];
 		
-		getPubKey(); //initialize javacard keys
+		getPublicKey(); //initialize javacard keys
 		nonce = genNonceInstance((short)3); //simple nonce
 		register();
 	}
@@ -177,16 +183,25 @@ public class IdentityCard extends Applet {
 		case GET_def_DATA:
 			defDATA(apdu);
 			break;
-		//update time if validateTIME returnns true
-		case GET_TS_DATA:
-			TSDATA(apdu);
-			break;
+		//placeholder for testing methods
+//		case GET_TS_DATA:
+//			TSDATA(apdu);
+//			break;
 			
+		case GET_pubKey:
+			getPubKeyINS(apdu);
+			break;
 //		generate a nonce of size 'n' for each run	
 		case GEN_NONCE: 
 			genNonce(apdu);
 			break;
-			
+		case GET_Exponent:
+			getExponent(apdu);
+			break;
+		case GET_Modulus:
+			getModulus(apdu);
+			break;	
+				
 //		//hard code
 //		case SET_Data:
 //			setData(apdu);
@@ -238,7 +253,85 @@ public class IdentityCard extends Applet {
 //		else ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
 		else ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
 	}
+	
+	//returns elements to generate pubKey at the client side
+	private void getPubKeyINS(APDU apdu){
+		byte[] buffer = apdu.getBuffer();
+		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+		else{
+			byte[] neo = new byte[4];
+			short offset = 0;
+			byte pktype = ((RSAPublicKey) pubKey).getType();
+			short pksize = (short) ((RSAPublicKey) pubKey).getSize();
+			short expLen = (short) ((RSAPublicKey) pubKey).getExponent(buffer, (short) (offset + 2));
+		    short modLen = (short) ((RSAPublicKey) pubKey).getModulus(buffer, (short) (offset + 4 + expLen));
 
+		    neo[0] = pktype;
+		    neo[1] = (byte) pksize;
+		    neo[2] = (byte) expLen;
+		    neo[3] = (byte) modLen;
+		    
+			apdu.setOutgoing();
+			apdu.setOutgoingLength((short)4);
+			apdu.sendBytesLong(neo,(short)0,(short)4);
+		}
+	}
+	
+	//alternative way tried was to send each element separately
+	//returns exp to client
+	private void getExponent(APDU apdu) {
+	    byte[] buffer = apdu.getBuffer();
+		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+		else{
+//		    short length = ((RSAPublicKey) pubKey).getExponent(buffer, (short) 0);
+////	    apdu.setOutgoingAndSend((short)  length);
+////	    (RSAPublicKey)pubKey.
+//	    
+//	    RSAPublicKey pub;
+//	    pub.getExponent(pubKey,(short) 0);
+////	    pub.getModulus().toString(16);
+//	    
+//		apdu.setOutgoing();
+//		apdu.setOutgoingLength((short)buffer.length);
+//		apdu.sendBytesLong(length,(short)0,(short)buffer.length);
+		    }
+		}
+
+	private void getModulus(APDU apdu) {
+	    byte[] buffer = apdu.getBuffer();
+		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+		else{
+		    short length = ((RSAPublicKey) pubKey).getModulus(buffer, (short) 0);
+//		    apdu.setOutgoingAndSend((short) 0, length);
+		apdu.setOutgoing();
+		apdu.setOutgoingLength((short)buffer.length);
+		apdu.sendBytesLong(buffer,(short)0,(short)buffer.length);
+		    }
+		}
+
+//Alternatively: Serialize pubKey
+//	https://stackoverflow.com/questions/20897065/how-to-get-exponent-and-modulus-value-of-rsa-public-key-from-pfx-file-pem-file-i
+//reads the key object and stores it into the buffer
+//	private final short serializeKey(RSAPublicKey key, byte[] buffer, short offset) {
+//	    byte[] neo = new byte[4];
+//		short expLen = key.getExponent(buffer, (short) (offset + 2));
+//	    
+//		Util.setShort(buffer, offset, expLen);
+//	    short modLen = key.getModulus(buffer, (short) (offset + 4 + expLen));
+//	    Util.setShort(buffer, (short) (offset + 2 + expLen), modLen);
+//	    return (short) (4 + expLen + modLen);
+//	}
+	//reads the key from the buffer and stores it inside the key object
+//	private final short deserializeKey(RSAPublicKey key, byte[] buffer, short offset) {
+//	    short expLen = Util.getShort(buffer, offset);
+//	    key.setExponent(buffer, (short) (offset + 2), expLen);
+//	    short modLen = Util.getShort(buffer, (short) (offset + 2 + expLen));
+//	    key.setModulus(buffer, (short) (offset + 4 + expLen), modLen);
+//	    return (short) (4 + expLen + modLen);
+//	}
+	
+	
+	
 	//receive signed time from SP through Client; update card time if client time more recent 
 		private void genNonce(APDU apdu){
 			if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
@@ -362,49 +455,20 @@ public class IdentityCard extends Applet {
 		}
 	}
 
-//timeStamp
-	private void TSDATA(APDU apdu){
-		//If the pin is not validated, a response APDU with the
-		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
-		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
-		else{
-			byte[] buffer = apdu.getBuffer();
-			short bytesRead = apdu.setIncomingAndReceive();
-			
-			short l = (short) (nonce.length + name.length);
-//			byte[] msg = new byte[l]; //to be signed by private key
-	        byte[] msg = concat(name, nonce);
-
-	        Signature rsasign = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
-            Signature rsacheck = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
-            //sign; here is where data is signed
-            rsasign.init(privKey, Signature.MODE_SIGN);
-            short len = rsasign.getLength();
-            //Accumulates a signature of the input data - get data to be signed
-//            rsasign.update(msg, (short)0, (short)msg.length);
-            
-            // number of bytes of signature output in output buffer
-            short signature = rsasign.sign(msg, (short)0, (short)msg.length, buffer, (short)0);
-   			
-            rsasign.update(buffer, (short)0, signature);
-            
-            apdu.setOutgoing();
-            apdu.setOutgoingLength(signature);
-            apdu.sendBytesLong(buffer, (short)0, signature);
-//   		   while (signature > 0) {
-//               rsasign.update(buffer, (short)0, (short) buffer.length);
-//               apdu.sendBytesLong(buffer, (short)0, (short)buffer.length);
-//           }
-		}
-	}
+////timeStamp
+//	private void TSDATA(APDU apdu){
+//
+//	}
 	
+//helper methods	
 	//generate keys
-	public void getPubKey(){
+	public void getPublicKey(){
 		short keySize = 512;
 		KeyPair kp = new KeyPair(KeyPair.ALG_RSA, keySize);
 		kp.genKeyPair();
 		PrivateKey privKey = kp.getPrivate();
 		PublicKey pubKey = kp.getPublic();
+		
 	}
 	
 	//generate random array of size n, as nonce, an instance variable
