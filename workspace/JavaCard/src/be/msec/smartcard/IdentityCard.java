@@ -13,6 +13,7 @@ package be.msec.smartcard;
 //import javax.crypto.Cipher;
 
 import javacard.framework.APDU;
+import javacard.framework.APDUException;
 import javacard.framework.Applet;
 import javacard.framework.ISO7816;
 import javacard.framework.ISOException;
@@ -39,7 +40,8 @@ public class IdentityCard extends Applet {
 	private final static byte REQ_VALIDATION_INS=(byte)0x16;
 	private final static byte VALIDATE_TIME_INS=(byte)0x25;
 	private final static byte UPDATE_LOCAL_TIME_INS=(byte)0x31;
-		
+	private final static byte VERIFY_PK_INS = (byte) 0x32;
+	private final static byte FILL_TEMPBUFFER = (byte) 0x33;
 //	//INS codes for different SPs
 	private final static byte GET_eGov_DATA=(byte)0x05;
 	private final static byte GET_Health_DATA=(byte)0x06;	
@@ -63,10 +65,14 @@ public class IdentityCard extends Applet {
 	byte[] TSN=new byte[]{-77,42,40,-107,-108,-42,125,12,28,-5,44,-22,14,46,61,-115,-45,-126,38,-64,20,53,55,-69,33,48,119,36,106,12,-45,-71,-106,120,114,91,78,56,42,-15,-40,74,24,-74,-21,-72,-75,-36,-77,-66,122,-37,120,94,3,112,19,-55,6,73,118,127,-13,109};
 	byte[] TSE=new byte[]{1,0,1};
 	
+	private final static byte[] CAE=new byte[]{1,0,1};
+	private final static byte[] CAN=new byte[]{-44,104,46,-36,6,124,-72,35,-75,3,-78,60,66,20,-10,74,18,70,10,5,10,-117,16,-48,-88,108,-64,-124,95,117,-71,40,108,-118,-86,-24,6,104,-127,119,20,-53,67,89,92,-3,6,124,-122,-6,-47,-103,-66,-34,-125,70,121,17,89,21,-48,71,68,7};
 	
-	private AESKey key;
+
 	
-	
+
+	byte[] tempbuffer = new byte[200];
+	short tempbufferSentinel = (short) 0;
 	
 ////	instance variables declaration
 	private byte[] serial = new byte[]{0x30, 0x35, 0x37, 0x36, 0x39, 0x30, 0x31, 0x05};
@@ -203,6 +209,13 @@ public class IdentityCard extends Applet {
 		case UPDATE_LOCAL_TIME_INS:
 			updateLocalTime(apdu);
 			break;
+		case VERIFY_PK_INS:
+			verifyPK(apdu);
+			break;
+		case FILL_TEMPBUFFER:
+			fillTempBuffer(apdu);
+			break;
+			
 			
 			
 			
@@ -276,8 +289,6 @@ public class IdentityCard extends Applet {
 				TSkey.setModulus(TSN, (short)0,(short) TSN.length);
 				TSkey.setExponent(TSE, (short)0,(short) TSE.length);
 				
-				
-				
 				apdu.setOutgoing();
 				
 				encryptCipher.init(TSkey, Cipher.MODE_ENCRYPT);
@@ -302,6 +313,7 @@ public class IdentityCard extends Applet {
 				TSkey.setExponent(TSE, (short)0,(short) TSE.length);
 				short signatureSize = (short)(TSkey.getSize() >> 3);
 				
+				
 				asymSignature.init(TSkey, Signature.MODE_VERIFY);
 				
 				byte[] plainMessage = new byte[nonce.length + 12];
@@ -317,6 +329,72 @@ public class IdentityCard extends Applet {
 					ISOException.throwIt((short)2);
 				}
 			    }
+			}
+		
+		
+		
+		private void fillTempBuffer(APDU apdu){
+			
+			byte[] buffer = apdu.getBuffer();
+			short state = Util.makeShort(buffer[ISO7816.OFFSET_CDATA], buffer[ISO7816.OFFSET_CDATA+1]);
+			
+			if (state == (short)0) {
+				tempbufferSentinel = (short)0;
+			}
+			Util.arrayCopy(buffer, (short)(ISO7816.OFFSET_CDATA+2), tempbuffer ,state,(short) (apdu.getIncomingLength()-2));
+			tempbufferSentinel = (short) (tempbufferSentinel + apdu.getIncomingLength()-2);
+		}
+		
+		
+		
+		
+		private void verifyPK(APDU apdu){
+			if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+			else{
+				
+				
+				
+				
+				short Elength = Util.makeShort(tempbuffer[11], tempbuffer[12]) ;
+				short Nlength = Util.makeShort(tempbuffer[9], tempbuffer[10]) ;
+				
+				RSAPublicKey CAkey =  (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_512, false); 
+				CAkey.setModulus(CAN, (short)0,(short) CAN.length);
+				CAkey.setExponent(CAE, (short)0,(short) CAE.length);
+				short signatureSize = (short)(CAkey.getSize() >> 3);
+				
+				
+				
+				byte[] plainMessage = new byte[Elength + Nlength + 13];
+				byte[] encryptedM = new byte[signatureSize];
+				Util.arrayCopy(tempbuffer, (short)0 , plainMessage ,(short)0, (short) plainMessage.length);
+				Util.arrayCopy(tempbuffer,(short)80, encryptedM,(short) 0, signatureSize);
+				
+				
+				Signature checkSignature = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1, false);
+				
+				checkSignature.init(CAkey, Signature.MODE_VERIFY);
+				
+				
+				
+				boolean verified = checkSignature.verify(plainMessage, (short)0,(short) (short) plainMessage.length, encryptedM, (short) 0, signatureSize);
+				//boolean verified = asymSignature.verify(tempbuffer, (short)0,(short) (13 + Elength + Nlength), tempbuffer, (short) (13 + Elength + Nlength), signatureSize);
+      
+				//boolean verified = true; 
+				
+				if (verified) 
+				{	ISOException.throwIt((short)3);
+				} 
+				else {
+				byte[] buffer = apdu.getBuffer();
+				buffer = tempbuffer;
+				apdu.setOutgoingLength((short) buffer.length);
+				apdu.sendBytes((short)0,(short) buffer.length);
+				//	ISOException.throwIt((short) tempbufferSentinel);
+				}
+				}
+				
+			    
 			}
 		
 	

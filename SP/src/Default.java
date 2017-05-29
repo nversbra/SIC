@@ -80,13 +80,14 @@ public class Default extends HttpServlet {
         jo.put("selectedData", eIDData);
         jo.put("domain","Default");
         jo.put("service",service);
-        jo.put("cert",sCert);
+        jo.put("cert", getCert());
+        // jo.put("cert", sCert);
 
 
 
         // System.out.println("cert: " +sCert);
         System.out.println(jo.toJSONString());
-
+        clientIp = "ubuntu";
         comm.sendCert(clientIp,jo.toJSONString());
 
 
@@ -166,7 +167,25 @@ public class Default extends HttpServlet {
         return new KeyPair(publicKey, privateKey);
     }
 
+    private String getCert( ) {
+        byte[] cert = new byte[]{1,0,19,0,4,0,20,0,27,0,64,0,3,-44,104,46,-36,6,124,-72,35,-75,3,-78,60,66,20,-10,74,18,70,10,5,10,-117,16,-48,-88,108,-64,-124,95,117,-71,40,108,-118,-86,-24,6,104,-127,119,20,-53,67,89,92,-3,6,124,-122,-6,-47,-103,-66,-34,-125,70,121,17,89,21,-48,71,68,7,1,0,1,117,27,-126,12,-120,107,-116,75,-103,-3,94,-65,-17,32,-90,-117,-5,50,-69,106,72,53,-20,-4,17,-71,-92,109,70,-74,-81,122,-77,101,99,102,123,-99,-30,108,-43,54,-24,126,-106,-91,41,65,57,59,-12,-87,16,-34,-96,-71,61,-86,52,-86,-102,-102,119,124};
+        String encoded = null;
+        try {
+            encoded = MiddlewareComm.BytesToString(cert);
+        } catch (CertificateEncodingException e) {
+            e.printStackTrace();
+        }
+
+
+
+
+        return encoded;
+    }
+
     private Certificate getCertFromKeyStore(String service) throws Exception {
+
+
+
         ServletContext context = this.getServletContext();
 
         InputStream ins = context.getResourceAsStream("/WEB-INF/default.jks");

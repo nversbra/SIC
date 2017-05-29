@@ -46,6 +46,8 @@ class ClientServiceThread extends Thread {
                 //log_loc.println("Client Says :" + clientCommand);
                 JSONParser parser = new JSONParser();
                 JSONObject req = (JSONObject) parser.parse(clientCommand);
+                Client iDClient = new Client();
+                Client.handleJSON(req);
                 log_loc.println(req.toJSONString());
                 if (clientCommand.equalsIgnoreCase("quit")) {
                     running = false;

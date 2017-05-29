@@ -33,6 +33,14 @@ public class MiddlewareComm {
         return encodedCertText;
     }
 
+    public static String BytesToString(byte[] c) throws CertificateEncodingException {
+        String LINE_SEPERATOR = System.getProperty("line.separator");
+        final Base64.Encoder encoder = Base64.getMimeEncoder(64, LINE_SEPERATOR.getBytes());
+        final byte[] rawCrtText = c;
+        final String encodedCertText = new String(encoder.encode(rawCrtText));
+        return encodedCertText;
+    }
+
     X509Certificate stringToCert(String c) throws CertificateException {
         final Base64.Decoder decoder = Base64.getMimeDecoder();
         byte[] decoded = decoder.decode(c);

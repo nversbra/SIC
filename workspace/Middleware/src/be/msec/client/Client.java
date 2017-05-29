@@ -7,10 +7,17 @@ import java.util.Arrays;
 import java.util.Calendar;
 
 import javax.smartcardio.*;
+
+import org.json.simple.JSONObject;
+
+import com.sun.org.apache.xml.internal.security.utils.Base64;
+
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.*;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.text.DateFormatSymbols;
 import java.text.SimpleDateFormat;
 
@@ -21,6 +28,8 @@ public class Client {
 	private static final byte VALIDATE_PIN_INS = 0x22;
 	private static final byte VALIDATE_TIME_INS = 0x25;
 	private static final byte UPDATE_LOCAL_TIME_INS = 0x31;
+	private static final byte VERIFY_PK_INS = (byte) 0x32;
+	private final static byte FILL_TEMPBUFFER = (byte) 0x33;
 	private static final byte GEN_NONCE = 0x20;
 	private final static short SW_VERIFICATION_FAILED = 0x6300;
 	private static final short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
@@ -36,7 +45,7 @@ public class Client {
 //	private final static byte GET_def_DATA=(byte)0x08;
 	//	timestamp implementation to be discussed
 	//private final static byte GET_TS_DATA=(byte)0x09;
-	private static byte REQ_VALIDATION_INS=(byte)0x16;
+	private final static byte REQ_VALIDATION_INS=(byte)0x16;
 	
 	//individuals identified by a service-specific pseudonym
 	private  byte[] nym_Gov = new byte[]{0x11}; // to have something to test data saving on javacard
@@ -69,10 +78,12 @@ public class Client {
 	 */
 	
 	static TSClient TS = new TSClient();
+	static IConnection c;
+	boolean simulation = true;		// Choose simulation vs real card here
 	
-	public static void main(String[] args) throws Exception {
-		IConnection c;
-		boolean simulation = true;		// Choose simulation vs real card here
+	public Client() throws Exception {
+		CommandAPDU a;
+		ResponseAPDU r;
 
 		if (simulation) {
 			//Simulation:	
@@ -92,8 +103,7 @@ public class Client {
 			 * See http://java.sun.com/javase/6/docs/jre/api/security/smartcardio/spec/index.html
 			 */
 			
-			CommandAPDU a;
-			ResponseAPDU r;
+			
 			
 			if (simulation) {
 				//0. create applet (only for simulator!!!)
@@ -160,6 +170,7 @@ public class Client {
 			System.out.println(r);
 			
 			if (r.getSW()==TIME_UPDATE_REQUIRED){
+				System.out.println("Time update needed, contacting TSS");
 				a = new CommandAPDU(IDENTITY_CARD_CLA, GEN_NONCE, 0x00, 0x00); 
 				r = c.transmit(a); 
 				System.out.println(r);
@@ -185,8 +196,10 @@ public class Client {
 					System.out.println("Succesfully updated validated time on ID");
 				}
 	                
+			}} catch (Exception e) {
+				// TODO: handle exception
 			}
-				
+		}
 				
 			//Send time to card, receive boolean
 			//In progress...
@@ -207,20 +220,20 @@ public class Client {
 			
 			//the card needs to handle singed time from client
 
-			byte[] signature = r.getData();
+			//byte[] signature = r.getData();
 			//get time from Server
  
 			//certificate handling
 			//the card needs to handle singed time from client
-			byte[] signedData = "SignedTime".getBytes("ASCII");
-			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, signedData); 
-			r = c.transmit(a); 
-			System.out.println("\nsigned Data - HEX: "+toHex(signedData));
+			//byte[] signedData = "SignedTime".getBytes("ASCII");
+			//a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, signedData); 
+			//r = c.transmit(a); 
+			//System.out.println("\nsigned Data - HEX: "+toHex(signedData));
 			// checkSW(response); 
 
-			signature = r.getData();
-			System.out.println();
-			System.out.printf("Signature from card: %s\n", toHex(signature));
+			//signature = r.getData();
+			//System.out.println();
+			//System.out.printf("Signature from card: %s\n", toHex(signature));
             
 //// get Serial#, example to get data from card	
 //			r = c.transmit(a);
@@ -242,12 +255,12 @@ public class Client {
 //		}
 			
 	
-			}
-		finally {
-			System.out.println("\n------ end connection ------");
-			c.close();  // close the connection with the card
-		}
-	}
+			//}
+		//finally {
+			//System.out.println("\n------ end connection ------");
+			//c.close();  // close the connection with the card
+		//}
+	//}
 	
 //	public static Signature getSig(Signature){
 //		Signature signature = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1,false) ; //OR ALG_RSA_SHA_512_PKCS1
@@ -260,7 +273,57 @@ public class Client {
             buff.append(String.format("%02X", b)); 
         } 
         return buff.toString(); 
-    } 
+    }
+
+	public static void handleJSON(JSONObject req) throws Exception {
+		// TODO Auto-generated method stub
+		CommandAPDU a;
+		ResponseAPDU r;
+		String Domain = (String) req.get("domain");
+		String Cert = (String) req.get("cert");
+		byte [] decoded = Base64.decode(Cert);
+		
+		//X509Certificate SPCertificate =  (X509Certificate)CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(decoded));
+		
+	 
+		byte[] slice1 = Arrays.copyOfRange(decoded, 0, 80);
+		
+		ByteBuffer bb = ByteBuffer.allocate(slice1.length + 2);
+		bb.putShort((short)0);
+		bb.position(2);
+		bb.put(slice1);
+		bb.position(0);
+		byte[] result1 = bb.array();
+		
+		byte[] slice2 = Arrays.copyOfRange(decoded, 80, decoded.length);
+		ByteBuffer bbe = ByteBuffer.allocate(slice2.length + 2);
+		bbe.putShort((short)80);
+		bbe.position(2);
+		bbe.put(slice2);
+		bbe.position(0);
+		byte[] result2 = bb.array();
+		
+	    a = new CommandAPDU(IDENTITY_CARD_CLA, FILL_TEMPBUFFER, 0x00, 0x00,result1);
+	    r = c.transmit(a);
+		System.out.println(r);
+		
+		a = new CommandAPDU(IDENTITY_CARD_CLA, FILL_TEMPBUFFER, 0x00, 0x00,result2);
+		r = c.transmit(a);
+		
+		System.out.println(r);
+		a = new CommandAPDU(IDENTITY_CARD_CLA, VERIFY_PK_INS, 0x00, 0x00,decoded);
+		System.out.println(a.getNc());
+
+		r = c.transmit(a);
+		
+		System.out.println(r);
+		
+		System.out.println(r);
+		
+		
+		
+		
+	} 
 	
 }
 	

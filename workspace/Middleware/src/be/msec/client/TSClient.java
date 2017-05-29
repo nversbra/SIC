@@ -35,10 +35,7 @@ public class TSClient {
 	                out = new DataOutputStream(sslSocket.getOutputStream());
 	                in = new DataInputStream(sslSocket.getInputStream());
 
-	               
-	                String userInput;
-	                String ctime = "";
-	               
+	        
 	                
 	                    //String enc_nonce = encrypt(nonce,TSkey);
 	                    //out.println(enc_nonce);
@@ -50,14 +47,6 @@ public class TSClient {
 	                    if(length>0) {
 	                    response = new byte[length];
 	                    in.readFully(response, 0, response.length); // read the message
-	                    
-	                    
-	               
-	                    
-	                
-	                
-
-
 
 	                // Closing the Streams and the Socket
 	                out.close();
