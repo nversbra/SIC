@@ -248,10 +248,13 @@ public class IdentityCard extends Applet {
 		        //nonce = {'h','e','l','l','o'};
 				
 				byte[] alice = genNonceInstance((short)5);
+				byte[] bob = genNonceInstance((short)5);
+				
+				byte[] ab = concat(alice, bob);
 				
 				apdu.setOutgoing();
-				apdu.setOutgoingLength((short)alice.length);
-				apdu.sendBytesLong(alice,(short)0,(short)alice.length);
+				apdu.setOutgoingLength((short)ab.length);
+				apdu.sendBytesLong(ab,(short)0,(short)ab.length);
 				//ISOException.throwIt(nonce);
 			    }
 			}
@@ -401,9 +404,9 @@ public class IdentityCard extends Applet {
 	//generate random array of size n, as nonce, an instance variable
 	private byte[] genNonceInstance(short n){
 		byte[] rn = new byte[n];
-		RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
-//		RandomData rand = RandomData.getInstance(RandomData.ALG_PSEUDO_RANDOM); //works in generating nonce size n
-		rand.generateData(rn, (short)0, (short)rn.length);
+//		RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
+		RandomData rand = RandomData.getInstance(RandomData.ALG_PSEUDO_RANDOM); //works in generating nonce size n
+		rand.generateData(rn, (short)0, (short)n);
 		return rn;
 	}
 
@@ -415,7 +418,8 @@ public class IdentityCard extends Applet {
 			ar[i] = ar1[i];
 		}
 		//step 2: copy ar2 into remaining space in ar
-		Util.arrayCopy(ar, (short)ar1.length,ar2, (short)0, (short)ar.length);
+//		Util.arrayCopy(ar, (short)ar1.length,ar2, (short)0, (short)ar.length);
+		Util.arrayCopy(ar2, (short)0, ar, (short)ar1.length, (short)ar2.length);
 		return ar;
 	}
 	
