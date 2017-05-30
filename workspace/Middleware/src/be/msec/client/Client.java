@@ -3,6 +3,11 @@ package be.msec.client;
 import be.msec.client.connection.Connection;
 import be.msec.client.connection.IConnection;
 import be.msec.client.connection.SimulatedConnection;
+import javacard.security.KeyBuilder;
+import javacard.security.RSAPublicKey;
+
+
+
 import java.util.Arrays;
 import javax.smartcardio.*;
 import java.io.*;
@@ -60,6 +65,10 @@ public class Client {
 	private final static byte SKsp=(byte)0x26;
 	private final static byte Ku=(byte)0x27;
 	private final static byte PKG=(byte)0x28;
+	
+	public static byte[] pubExponent;
+	private static byte[] pubModulus;
+	private static RSAPublicKey pubKey3;
 	
 	/**
 	 * @param args
@@ -146,14 +155,16 @@ public class Client {
 			
 			System.out.println("get exp data length GET_EXP_INS: " +  r.getNr());
 			
-			byte[] d5 = r.getData();
-			byte[] s5 = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
+			pubExponent = new byte[r.getNr()-6];
+			byte[] de = r.getData();
+			byte[] se = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
 			//check padding of data bytes, what are the extra bytes?
-			for(int i=6; i <d5.length; i++){
-				s5[i-6] = (byte)d5[i];
+			for(int i=6; i <de.length; i++){
+				se[i-6] = (byte)de[i];
 			}
 
-			System.out.println("EXP DATA: " + Arrays.toString(d5));
+			pubExponent = se.clone();
+			System.out.println("EXP DATA: " + Arrays.toString(de));
 			System.out.println("EXP DATA length - getdata.length: " + r.getData().length);
 			
 //keyMod			
@@ -162,7 +173,7 @@ public class Client {
 
 			
 			System.out.println("get MOD data length GET_MODU_INS: " +  r.getNr());
-			
+			pubModulus = new byte[r.getNr()-6];
 			byte[] dm = r.getData();
 			byte[] sm = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
 			//check padding of data bytes, what are the extra bytes?
@@ -170,21 +181,25 @@ public class Client {
 				sm[i-6] = (byte)dm[i];
 			}
 
+			pubModulus = sm.clone();
 			System.out.println("MOD DATA: " + Arrays.toString(dm));
 			System.out.println("MOD DATA length - getdata.length: " + r.getData().length);
 			
-//			CertificateFactory certFac = CertificateFactory.getInstance("X.509");
-//			byte[] encodedCert = null; //Get from TS
-//			InputStream is = new ByteArrayInputStream (encodedCert);
-//			X509Certificate cert = (X509Certificate) certFac.generateCertificate(is);
-//			is.close();
-//			
-//			System.out.println(r);
-//			if (r.getSW()==SW_VERIFICATION_FAILED) throw new Exception("PIN INVALID");
-//			else if(r.getSW()!=SUCCESS_RESPONS ) throw new Exception("Exception on the card: " + r.getSW());
-//			System.out.println("PIN Verified");
-
+			System.out.println("exp length: " + pubExponent.length);
+			System.out.println("mod length: " + pubModulus.length);
+//			genPubKey(pubExponent,pubModulus);
+//			System.out.print(pubKey3);
 			
+			short offset =(short)0;
+			short keySizeInBytes = (short) 64;
+			short keySizeInBits = (short) 512;
+			System.out.println("here 1");
+
+			RSAPublicKey pubKey = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, KeyBuilder.LENGTH_RSA_512, false);
+			System.out.println("here2");
+			pubKey.setExponent(pubExponent, offset, (short)3);
+			pubKey.setModulus(pubModulus, offset, keySizeInBytes);
+			System.out.println("here 3");
 			
 ////get public key
 //			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_pubKey, 0x00, 0x00); 
@@ -194,19 +209,19 @@ public class Client {
 //			System.out.println("pubKey size: : " + r.getNr());
 			
 ////TSDATA			
-			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_TS_DATA, 0x00, 0x00); 
-			r = c.transmit(a);
-			
-			byte[] dr = r.getData();
-			byte[] sr = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
-			//check padding of data bytes, what are the extra bytes?
-			for(int i=6; i <dr.length; i++){
-				sr[i-6] = (byte)dr[i];
-			}
-			System.out.println("TS Data instruction: ");
-			System.out.println("length of RANDOM NUMBER data array: " + r.getNr());
-			System.out.println("RANDOM NUMBER: " + Arrays.toString(sr));
-			System.out.println("RANDOM NUMBER length getdata.length: " + r.getData().length);
+//			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_TS_DATA, 0x00, 0x00); 
+//			r = c.transmit(a);
+//			
+//			byte[] dr = r.getData();
+//			byte[] sr = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
+//			//check padding of data bytes, what are the extra bytes?
+//			for(int i=6; i <dr.length; i++){
+//				sr[i-6] = (byte)dr[i];
+//			}
+//			System.out.println("TS Data instruction: ");
+//			System.out.println("length of RANDOM NUMBER data array: " + r.getNr());
+//			System.out.println("RANDOM NUMBER: " + Arrays.toString(sr));
+//			System.out.println("RANDOM NUMBER length getdata.length: " + r.getData().length);
 //			
 ////			System.out.print("TSDATA: ");
 ////			System.out.println(ty.length);
@@ -289,6 +304,20 @@ public class Client {
 //		Signature signature = Signature.getInstance(Signature.ALG_RSA_SHA_PKCS1,false) ; //OR ALG_RSA_SHA_512_PKCS1
 //		signature.initSign(privateKey, Signature.M);
 //	}
+	
+	
+	private static void genPubKey(byte[] expon, byte[] modul){
+		short offset =0;
+		short keySizeInBytes = (short) 64;
+		short keySizeInBits = (short) 512;
+		System.out.println("here 1");
+		pubKey3 = (RSAPublicKey) KeyBuilder.buildKey(KeyBuilder.TYPE_RSA_PUBLIC, keySizeInBits, false);
+		System.out.println("here2");
+		pubKey3.setExponent(expon, offset, (short)3);
+		pubKey3.setModulus(modul, offset, keySizeInBytes);
+	}
+	
+	
 	
     public static String toHex(byte[] bytes) { 
         StringBuilder buff = new StringBuilder(); 

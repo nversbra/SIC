@@ -20,17 +20,18 @@ import javacard.framework.JCSystem;
 import javacard.framework.OwnerPIN;
 import javacard.security.*;
 import javacard.framework.Util;
+//import javacard.security.KeyPair;
 
-import java.math.BigInteger;
-import java.nio.ByteBuffer;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.interfaces.RSAPublicKey;
+//import java.nio.ByteBuffer;
+//import java.security.KeyPair;
+//import java.security.KeyPairGenerator;
+//import java.security.NoSuchAlgorithmException;
+//import java.security.SecureRandom;
+//import java.security.interfaces.RSAPublicKey;
 
-import javax.crypto.Cipher;
+//import javax.crypto.Cipher;
 //import javacardx.crypto.Cipher;
+import javax.security.*;
 
 
 //// in client not card
@@ -268,17 +269,29 @@ public class IdentityCard extends Applet {
 	    byte[] buffer = apdu.getBuffer();
 		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
 		else{
-			RSAPublicKey publicKey = (RSAPublicKey) kp.getPublic();
-            BigInteger rexp = publicKey.getPublicExponent();
-            byte[] rexpo = rexp.toByteArray();
-            if (rexpo[0] == 0) {
-                byte[] tmp = new byte[rexpo.length - 1];
-                System.arraycopy(rexpo, 1, tmp, 0, tmp.length);
-                rexpo = tmp;
-            }
-    		apdu.setOutgoing();
-    		apdu.setOutgoingLength((short)rexpo.length);
-    		apdu.sendBytesLong(rexpo,(short)0,(short)rexpo.length);
+		        short privateKeySize = 0;
+		        short publicKeySize = 0;
+		        byte[] publicArray;
+		        byte[] privateArray;
+		        try {
+		                    publicKeySize = pubKey.getSize();
+		                    privateKeySize = privKey.getSize();
+
+		                    byte[] publicKey = JCSystem.makeTransientByteArray((short) (publicKeySize), JCSystem.CLEAR_ON_DESELECT);
+		                    ((RSAPublicKey) privKey).getExponent(publicKey, (short) publicKeySize);
+
+		                    Util.arrayCopyNonAtomic(publicKey, (short) 0, buffer, (short) 0, (short) (publicKeySize ));
+		                    apdu.setOutgoingAndSend((short) 0, (short) (publicKeySize));
+
+		        } catch (Exception e) {
+		            if (e instanceof CryptoException) {
+		                short r = ((CryptoException) e).getReason();
+		                ISOException.throwIt(r);
+		            } else {
+		                ISOException.throwIt((short) 0x8888);
+		            }
+		        }
+
 		    }
 		}
 
@@ -287,24 +300,33 @@ public class IdentityCard extends Applet {
 		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
 		else{
 			
+	        short privateKeySize = 0;
+	        short publicKeySize = 0;
+	        byte[] publicArray;
+	        byte[] privateArray;
+	        try {
+	                    publicKeySize = pubKey.getSize();
+	                    privateKeySize = privKey.getSize();
+
+	                    byte[] publicKey = JCSystem.makeTransientByteArray((short) (publicKeySize), JCSystem.CLEAR_ON_DESELECT);
+	                    ((RSAPublicKey) privKey).getModulus(publicKey, (short) publicKeySize);
+
+	                    Util.arrayCopyNonAtomic(publicKey, (short) 0, buffer, (short) 0, (short) (publicKeySize ));
+	                    apdu.setOutgoingAndSend((short) 0, (short) (publicKeySize));
+
+	        } catch (Exception e) {
+	            if (e instanceof CryptoException) {
+	                short r = ((CryptoException) e).getReason();
+	                ISOException.throwIt(r);
+	            } else {
+	                ISOException.throwIt((short) 0x8888);
+	            }
+	        }
+		}
 			
-            RSAPublicKey publicKey = (RSAPublicKey) kp.getPublic();
+	}	
 			
-            BigInteger rmod = publicKey.getModulus();
-			
-			
-            byte[] rmodu = rmod.toByteArray();
-            if (rmodu[0] == 0) {
-                byte[] tmp = new byte[rmodu.length - 1];
-                System.arraycopy(rmodu, 1, tmp, 0, tmp.length);
-                rmodu = tmp;
-            }
-			
-    		apdu.setOutgoing();
-    		apdu.setOutgoingLength((short)rmodu.length);
-    		apdu.sendBytesLong(rmodu,(short)0,(short)rmodu.length);
-		    }
-		}	
+	
 	//receive signed time from SP through Client; update card time if client time more recent 
 		private void genNonce(APDU apdu){
 			if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
@@ -443,15 +465,21 @@ public class IdentityCard extends Applet {
 //helper methods	
 //	generate RSAPub keys
 	public void genKeyPair(){
-		KeyPairGenerator kpg;
-		try {
-			kpg = KeyPairGenerator.getInstance("RSA");
-	        kpg.initialize(512);
-	        kp = kpg.genKeyPair();
-		} catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		short keySize = 512;
+		kp = new KeyPair(KeyPair.ALG_RSA, keySize);
+		kp.genKeyPair();
+		pubKey = (RSAPublicKey) kp.getPublic();
+		privKey = (RSAPrivateKey) kp.getPrivate();
+		
+//		KeyPairGenerator kpg;
+//		try {
+//			kpg = KeyPairGenerator.getInstance("RSA");
+//	        kpg.initialize(512);
+//	        kp = kpg.genKeyPair();
+//		} catch (NoSuchAlgorithmException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 	}
 
 	//concatenating two arrays in two steps, noting that current setup, ar1.length = 1
@@ -482,6 +510,19 @@ public class IdentityCard extends Applet {
 		 return buf;
 	}
 	
+//	private void getEnc(){
+//		try{
+//			privKey = (RSAPrivateKey) kp.getPrivate();
+//			
+//			Cipher rsaenc = Cipher.getInstance("RSA");
+//			
+//			rsaenc.init(Cipher.ENCRYPT_MODE, pubkey);
+//			rsadec.init(Cipher.DECRYPT_MODE, privKey);
+//				
+//		}catch (Exception e) {
+//			System.out.println(e.getMessage());
+//		}
+//	}
 	
 	
 	
