@@ -139,20 +139,50 @@ public class Client {
 //			System.out.println("generate nonce instruction: ");
 //			System.out.println("Nonce: " + Arrays.toString(s1));
 			
-//Cert
-			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_Exponent, 0x00, 0x00,new byte[]{0x01,0x02,0x03,0x04});
+//keyExponent
+			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_Exponent, 0x00, 0x00);
 			r = c.transmit(a);
 
-			CertificateFactory certFac = CertificateFactory.getInstance("X.509");
-			byte[] encodedCert = null; //Get from TS
-			InputStream is = new ByteArrayInputStream (encodedCert);
-			X509Certificate cert = (X509Certificate) certFac.generateCertificate(is);
-			is.close();
 			
-			System.out.println(r);
-			if (r.getSW()==SW_VERIFICATION_FAILED) throw new Exception("PIN INVALID");
-			else if(r.getSW()!=SUCCESS_RESPONS ) throw new Exception("Exception on the card: " + r.getSW());
-			System.out.println("PIN Verified");
+			System.out.println("get exp data length GET_EXP_INS: " +  r.getNr());
+			
+			byte[] d5 = r.getData();
+			byte[] s5 = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
+			//check padding of data bytes, what are the extra bytes?
+			for(int i=6; i <d5.length; i++){
+				s5[i-6] = (byte)d5[i];
+			}
+
+			System.out.println("EXP DATA: " + Arrays.toString(d5));
+			System.out.println("EXP DATA length - getdata.length: " + r.getData().length);
+			
+//keyMod			
+			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_Modulus, 0x00, 0x00);
+			r = c.transmit(a);
+
+			
+			System.out.println("get MOD data length GET_MODU_INS: " +  r.getNr());
+			
+			byte[] dm = r.getData();
+			byte[] sm = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
+			//check padding of data bytes, what are the extra bytes?
+			for(int i=6; i <dm.length; i++){
+				sm[i-6] = (byte)dm[i];
+			}
+
+			System.out.println("MOD DATA: " + Arrays.toString(dm));
+			System.out.println("MOD DATA length - getdata.length: " + r.getData().length);
+			
+//			CertificateFactory certFac = CertificateFactory.getInstance("X.509");
+//			byte[] encodedCert = null; //Get from TS
+//			InputStream is = new ByteArrayInputStream (encodedCert);
+//			X509Certificate cert = (X509Certificate) certFac.generateCertificate(is);
+//			is.close();
+//			
+//			System.out.println(r);
+//			if (r.getSW()==SW_VERIFICATION_FAILED) throw new Exception("PIN INVALID");
+//			else if(r.getSW()!=SUCCESS_RESPONS ) throw new Exception("Exception on the card: " + r.getSW());
+//			System.out.println("PIN Verified");
 
 			
 			
@@ -163,7 +193,7 @@ public class Client {
 //			System.out.println("get pubKey: Instruction NEW: " + Arrays.toString(r.getData()));
 //			System.out.println("pubKey size: : " + r.getNr());
 			
-//TSDATA			
+////TSDATA			
 //			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_TS_DATA, 0x00, 0x00); 
 //			r = c.transmit(a);
 //			
@@ -178,74 +208,74 @@ public class Client {
 //			System.out.println("Nonce: " + Arrays.toString(s5));
 //			System.out.println("Nonce length getdata.length: " + r.getData().length);
 //			
-//			System.out.print("TSDATA: ");
-//			System.out.println(ty.length);
-//			System.out.println(ty);
-//			byte[] b =r.getData();
-//          byte[] slice = Arrays.copyOfRange(b, 6, b.length);
-//          String newnonce = new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
-//                
-//                System.err.println(newnonce);    
+////			System.out.print("TSDATA: ");
+////			System.out.println(ty.length);
+////			System.out.println(ty);
+////			byte[] b =r.getData();
+////          byte[] slice = Arrays.copyOfRange(b, 6, b.length);
+////          String newnonce = new String(slice, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
+////                
+////                System.err.println(newnonce);    
+////            
+////            
+////            
+////			String nonce =new String(b, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
+////			
+////			System.out.println(b.toString());
+////			System.out.println("\nnonce: "+(nonce));
+////			String timeResponse = TS.getTime(nonce);
+////			System.out.println("Recieved Time: " + timeResponse);
+////			System.out.println(timeResponse.getBytes("ASCII"));
+////			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, timeResponse.getBytes("ASCII")); 
+////			r = c.transmit(a); 
+////			
+////			//System.out.println("\nsigned Data - HEX: "+toHex(signedTime));
+////			// checkSW(response);
+////			
+////			//the card needs to handle singed time from client
+////
+////			byte[] signature = r.getData();
+////			//get time from Server
+//// 
+////			//certificate handling
+////			//the card needs to handle singed time from client
+////			byte[] signedData = "SignedTime".getBytes("ASCII");
+////Req Validation
+////			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, signedData); 
+////			r = c.transmit(a); 
+////			System.out.println("\nsigned Data - HEX: "+toHex(signedData));
+////			// checkSW(response); 
+////
+////			signature = r.getData();
+////			System.out.println();
+////			System.out.printf("Signature from card: %s\n", toHex(signature));
 //            
-//            
-//            
-//			String nonce =new String(b, java.nio.charset.StandardCharsets.US_ASCII);// b.toString();
-//			
-//			System.out.println(b.toString());
-//			System.out.println("\nnonce: "+(nonce));
-//			String timeResponse = TS.getTime(nonce);
-//			System.out.println("Recieved Time: " + timeResponse);
-//			System.out.println(timeResponse.getBytes("ASCII"));
-//			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, timeResponse.getBytes("ASCII")); 
-//			r = c.transmit(a); 
-//			
-//			//System.out.println("\nsigned Data - HEX: "+toHex(signedTime));
-//			// checkSW(response);
-//			
-//			//the card needs to handle singed time from client
+//// get Serial#, example to get data from card
+//			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_SERIAL_INS, 0x00, 0x00);
+//			r = c.transmit(a);
+////			
+//			byte[] d = r.getData();
+//			byte[] s = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
+//			//check padding of data bytes, what are the extra bytes?
+//			for(int i=6; i <d.length; i++){
+//				s[i-6] = (byte)d[i];
+//			}
+//			System.out.print("card serial#: ");
+//			System.out.println(Arrays.toString(s));
 //
-//			byte[] signature = r.getData();
-//			//get time from Server
-// 
-//			//certificate handling
-//			//the card needs to handle singed time from client
-//			byte[] signedData = "SignedTime".getBytes("ASCII");
-//Req Validation
-//			a = new CommandAPDU(IDENTITY_CARD_CLA, REQ_VALIDATION_INS, 0x00, 0x00, signedData); 
-//			r = c.transmit(a); 
-//			System.out.println("\nsigned Data - HEX: "+toHex(signedData));
-//			// checkSW(response); 
 //
-//			signature = r.getData();
-//			System.out.println();
-//			System.out.printf("Signature from card: %s\n", toHex(signature));
-            
-// get Serial#, example to get data from card
-			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_SERIAL_INS, 0x00, 0x00);
-			r = c.transmit(a);
+////eGov data
+//			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_eGov_DATA, 0x00, 0x00);
+//			r = c.transmit(a);
 //			
-			byte[] d = r.getData();
-			byte[] s = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
-			//check padding of data bytes, what are the extra bytes?
-			for(int i=6; i <d.length; i++){
-				s[i-6] = (byte)d[i];
-			}
-			System.out.print("card serial#: ");
-			System.out.println(Arrays.toString(s));
-
-
-//eGov data
-			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_eGov_DATA, 0x00, 0x00);
-			r = c.transmit(a);
-			
-			byte[] g =r.getData();
-			char[] h = new char[r.getNr()]; //number of data bytes in the response body
-			
-			for(int i=6; i <g.length; i++){
-			h[i-6] = (char)g[i]; //creating a variable able to be operated on
-			}
-			System.out.print("Gov Data: ");
-			System.out.println(h); //test implementation
+//			byte[] g =r.getData();
+//			char[] h = new char[r.getNr()]; //number of data bytes in the response body
+//			
+//			for(int i=6; i <g.length; i++){
+//			h[i-6] = (char)g[i]; //creating a variable able to be operated on
+//			}
+//			System.out.print("Gov Data: ");
+//			System.out.println(h); //test implementation
 			
 	
 			}

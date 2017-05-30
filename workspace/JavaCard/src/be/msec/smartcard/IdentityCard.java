@@ -20,6 +20,15 @@ import javacard.framework.JCSystem;
 import javacard.framework.OwnerPIN;
 import javacard.security.*;
 import javacard.framework.Util;
+
+import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.interfaces.RSAPublicKey;
+
 import javax.crypto.Cipher;
 //import javacardx.crypto.Cipher;
 
@@ -100,8 +109,9 @@ public class IdentityCard extends Applet {
 //	private final static byte Ku=(byte)0x27;
 //	private final static byte privKey=(byte)0x28;
 //	private final static byte pubKey=(byte)0x29;
-	private static PublicKey pubKey;
-	private static PrivateKey privKey;
+	private static RSAPublicKey pubKey;
+	private static RSAPrivateKey privKey;
+	private static KeyPair kp;
 	private static byte[] nonce;
 	
 	
@@ -121,8 +131,8 @@ public class IdentityCard extends Applet {
 		//4086 from tutorial, might be too long for this javacard but might work in jcwde
 		//info = new byte[4086];
 		
-		getPublicKey(); //initialize javacard keys
-		nonce = genNonceInstance((short)3); //simple nonce
+		genKeyPair(); //initialize javacard keys
+//		nonce = genNonceInstance((short)3); //simple nonce
 		register();
 	}
 
@@ -188,9 +198,9 @@ public class IdentityCard extends Applet {
 //			TSDATA(apdu);
 //			break;
 			
-		case GET_pubKey:
-			getPubKeyINS(apdu);
-			break;
+//		case GET_pubKey:
+//			getPubKeyINS(apdu);
+//			break;
 //		generate a nonce of size 'n' for each run	
 		case GEN_NONCE: 
 			genNonce(apdu);
@@ -254,84 +264,71 @@ public class IdentityCard extends Applet {
 		else ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
 	}
 	
-	//returns elements to generate pubKey at the client side
-	private void getPubKeyINS(APDU apdu){
-		byte[] buffer = apdu.getBuffer();
-		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
-		else{
-			byte[] neo = new byte[4];
-			short offset = 0;
-			byte pktype = ((RSAPublicKey) pubKey).getType();
-			short pksize = (short) ((RSAPublicKey) pubKey).getSize();
-			short expLen = (short) ((RSAPublicKey) pubKey).getExponent(buffer, (short) (offset + 2));
-		    short modLen = (short) ((RSAPublicKey) pubKey).getModulus(buffer, (short) (offset + 4 + expLen));
+//	//returns elements to generate pubKey at the client side
+//	private void getPubKeyINS(APDU apdu){
+//		byte[] buffer = apdu.getBuffer();
+//		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+//		else{
+//			byte[] neo = new byte[4];
+//			short offset = 0;
+//			byte pktype = ((RSAPublicKey) pubKey).getType();
+//			short pksize = (short) ((RSAPublicKey) pubKey).getSize();
+//			short expLen = (short) ((RSAPublicKey) pubKey).getExponent(buffer, (short) (offset + 2));
+//		    short modLen = (short) ((RSAPublicKey) pubKey).getModulus(buffer, (short) (offset + 4 + expLen));
+//
+//		    neo[0] = pktype;
+//		    neo[1] = (byte) pksize;
+//		    neo[2] = (byte) expLen;
+//		    neo[3] = (byte) modLen;
+//		    
+//			apdu.setOutgoing();
+//			apdu.setOutgoingLength((short)4);
+//			apdu.sendBytesLong(neo,(short)0,(short)4);
+//		}
+//	}
+//	
 
-		    neo[0] = pktype;
-		    neo[1] = (byte) pksize;
-		    neo[2] = (byte) expLen;
-		    neo[3] = (byte) modLen;
-		    
-			apdu.setOutgoing();
-			apdu.setOutgoingLength((short)4);
-			apdu.sendBytesLong(neo,(short)0,(short)4);
-		}
-	}
-	
-	//alternative way tried was to send each element separately
-	//returns exp to client
 	private void getExponent(APDU apdu) {
 	    byte[] buffer = apdu.getBuffer();
 		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
 		else{
-//		    short length = ((RSAPublicKey) pubKey).getExponent(buffer, (short) 0);
-////	    apdu.setOutgoingAndSend((short)  length);
-////	    (RSAPublicKey)pubKey.
-//	    
-//	    RSAPublicKey pub;
-//	    pub.getExponent(pubKey,(short) 0);
-////	    pub.getModulus().toString(16);
-//	    
-//		apdu.setOutgoing();
-//		apdu.setOutgoingLength((short)buffer.length);
-//		apdu.sendBytesLong(length,(short)0,(short)buffer.length);
+			RSAPublicKey publicKey = (RSAPublicKey) kp.getPublic();
+            BigInteger rexp = publicKey.getPublicExponent();
+            byte[] rexpo = rexp.toByteArray();
+            if (rexpo[0] == 0) {
+                byte[] tmp = new byte[rexpo.length - 1];
+                System.arraycopy(rexpo, 1, tmp, 0, tmp.length);
+                rexpo = tmp;
+            }
+    		apdu.setOutgoing();
+    		apdu.setOutgoingLength((short)rexpo.length);
+    		apdu.sendBytesLong(rexpo,(short)0,(short)rexpo.length);
 		    }
 		}
 
 	private void getModulus(APDU apdu) {
-	    byte[] buffer = apdu.getBuffer();
+		byte[] buffer = apdu.getBuffer();
 		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
 		else{
-		    short length = ((RSAPublicKey) pubKey).getModulus(buffer, (short) 0);
-//		    apdu.setOutgoingAndSend((short) 0, length);
-		apdu.setOutgoing();
-		apdu.setOutgoingLength((short)buffer.length);
-		apdu.sendBytesLong(buffer,(short)0,(short)buffer.length);
+			
+			
+            RSAPublicKey publicKey = (RSAPublicKey) kp.getPublic();
+			
+            BigInteger rmod = publicKey.getModulus();
+			
+			
+            byte[] rmodu = rmod.toByteArray();
+            if (rmodu[0] == 0) {
+                byte[] tmp = new byte[rmodu.length - 1];
+                System.arraycopy(rmodu, 1, tmp, 0, tmp.length);
+                rmodu = tmp;
+            }
+			
+    		apdu.setOutgoing();
+    		apdu.setOutgoingLength((short)rmodu.length);
+    		apdu.sendBytesLong(rmodu,(short)0,(short)rmodu.length);
 		    }
-		}
-
-//Alternatively: Serialize pubKey
-//	https://stackoverflow.com/questions/20897065/how-to-get-exponent-and-modulus-value-of-rsa-public-key-from-pfx-file-pem-file-i
-//reads the key object and stores it into the buffer
-//	private final short serializeKey(RSAPublicKey key, byte[] buffer, short offset) {
-//	    byte[] neo = new byte[4];
-//		short expLen = key.getExponent(buffer, (short) (offset + 2));
-//	    
-//		Util.setShort(buffer, offset, expLen);
-//	    short modLen = key.getModulus(buffer, (short) (offset + 4 + expLen));
-//	    Util.setShort(buffer, (short) (offset + 2 + expLen), modLen);
-//	    return (short) (4 + expLen + modLen);
-//	}
-	//reads the key from the buffer and stores it inside the key object
-//	private final short deserializeKey(RSAPublicKey key, byte[] buffer, short offset) {
-//	    short expLen = Util.getShort(buffer, offset);
-//	    key.setExponent(buffer, (short) (offset + 2), expLen);
-//	    short modLen = Util.getShort(buffer, (short) (offset + 2 + expLen));
-//	    key.setModulus(buffer, (short) (offset + 4 + expLen), modLen);
-//	    return (short) (4 + expLen + modLen);
-//	}
-	
-	
-	
+		}	
 	//receive signed time from SP through Client; update card time if client time more recent 
 		private void genNonce(APDU apdu){
 			if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
@@ -349,7 +346,6 @@ public class IdentityCard extends Applet {
 				apdu.setOutgoing();
 				apdu.setOutgoingLength((short)ab.length);
 				apdu.sendBytesLong(ab,(short)0,(short)ab.length);
-				//ISOException.throwIt(nonce);
 			    }
 			}
 	
@@ -461,14 +457,17 @@ public class IdentityCard extends Applet {
 //	}
 	
 //helper methods	
-	//generate keys
-	public void getPublicKey(){
-		short keySize = 512;
-		KeyPair kp = new KeyPair(KeyPair.ALG_RSA, keySize);
-		kp.genKeyPair();
-		PrivateKey privKey = kp.getPrivate();
-		PublicKey pubKey = kp.getPublic();
-		
+//	generate RSAPub keys
+	public void genKeyPair(){
+		KeyPairGenerator kpg;
+		try {
+			kpg = KeyPairGenerator.getInstance("RSA");
+	        kpg.initialize(512);
+	        kp = kpg.genKeyPair();
+		} catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	//generate random array of size n, as nonce, an instance variable
@@ -498,6 +497,11 @@ public class IdentityCard extends Applet {
 		byte[] buf = new byte[20];
 	    RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
 	    rand.generateData(buf, (short)0, (short)buf.length);
+	    
+//	    SecureRandom random = new SecureRandom();
+//	    byte[] values = new byte[20];
+//	    random.nextBytes(values);
+	    
 	    return buf;
 	}
 	
