@@ -8,8 +8,10 @@ import java.util.Calendar;
 
 import javax.smartcardio.*;
 
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import com.sun.org.apache.xml.internal.security.exceptions.Base64DecodingException;
 import com.sun.org.apache.xml.internal.security.utils.Base64;
 
 import java.io.*;
@@ -35,9 +37,12 @@ public class Client {
 	private static final short SW_PIN_VERIFICATION_REQUIRED = 0x6301;
 	private static final short TIME_UPDATE_REQUIRED = 0x6302;
 	private static final int  SUCCESS_RESPONS = 36864;
-	
+	private final static short CERT_VALIDATION_FAIL = 0x6303;
+	private final static short WRONG_CHALLENGE_RESPONSE = 0x6304;
 	private final static byte GET_SERIAL_INS= 0x24;
-	
+	private final static byte GENERATE_SYM_K_INS = (byte) 0x34;
+	private final static byte CHECK_CHALLENGE_RESPONSE = (byte) 0x36;
+	private final static byte AUTHENTICATE_TO_SP = (byte) 0x37;
 	//INS codes for different SPs
 	private final static byte GET_eGov_DATA=(byte)0x05;
 //	private final static byte GET_Health_DATA=(byte)0x06;	
@@ -46,6 +51,7 @@ public class Client {
 	//	timestamp implementation to be discussed
 	//private final static byte GET_TS_DATA=(byte)0x09;
 	private final static byte REQ_VALIDATION_INS=(byte)0x16;
+	private final static byte VALIDATE_CERT_TIME = (byte) 0x35;
 	
 	//individuals identified by a service-specific pseudonym
 	private  byte[] nym_Gov = new byte[]{0x11}; // to have something to test data saving on javacard
@@ -275,7 +281,7 @@ public class Client {
         return buff.toString(); 
     }
 
-	public static void handleJSON(JSONObject req) throws Exception {
+	public static String handleJSONSPauthenticate(JSONObject req) throws Exception {
 		// TODO Auto-generated method stub
 		CommandAPDU a;
 		ResponseAPDU r;
@@ -297,11 +303,11 @@ public class Client {
 		
 		byte[] slice2 = Arrays.copyOfRange(decoded, 80, decoded.length);
 		ByteBuffer bbe = ByteBuffer.allocate(slice2.length + 2);
-		bbe.putShort((short)80);
+		bbe.putShort((short)1);
 		bbe.position(2);
 		bbe.put(slice2);
 		bbe.position(0);
-		byte[] result2 = bb.array();
+		byte[] result2 = bbe.array();
 		
 	    a = new CommandAPDU(IDENTITY_CARD_CLA, FILL_TEMPBUFFER, 0x00, 0x00,result1);
 	    r = c.transmit(a);
@@ -311,19 +317,98 @@ public class Client {
 		r = c.transmit(a);
 		
 		System.out.println(r);
-		a = new CommandAPDU(IDENTITY_CARD_CLA, VERIFY_PK_INS, 0x00, 0x00,decoded);
-		System.out.println(a.getNc());
+		a = new CommandAPDU(IDENTITY_CARD_CLA, VERIFY_PK_INS, 0x00, 0x00,0x00);
+		//System.out.println(a.getNc());
 
 		r = c.transmit(a);
 		
 		System.out.println(r);
 		
+		if (r.getSW() ==  CERT_VALIDATION_FAIL ) {
+			//abort
+		} else {
+			//a = new CommandAPDU(IDENTITY_CARD_CLA, VALIDATE_CERT_TIME, 0x00, 0x00,0x00);
+			//r = c.transmit(a);
+			
+			System.out.println(r);
+			
+			byte[] AESdatah = r.getData();
+			System.out.println(AESdatah.length);    
+			byte[] AESdata = Arrays.copyOfRange(AESdatah, 6, 22);
+			byte[] challenge = Arrays.copyOfRange(AESdatah, 22, AESdatah.length);
+			
+			String AesString = Base64.encode(AESdata);
+			String challengeString = Base64.encode(challenge);
+			
+			return AesString+ " " + challengeString;
+			//new AES key is in here 
+		}
+		
 		System.out.println(r);
 		
 		
 		
 		
-	} 
+		return "hey";} 
+	
+	static public boolean handleJSONSPauthenticateFinal(JSONObject req, String clientCommand){
+		CommandAPDU a;
+		ResponseAPDU r;
+		
+		try {
+			byte[] challengeResponse = Base64.decode(clientCommand);
+			  
+			a = new CommandAPDU(IDENTITY_CARD_CLA, CHECK_CHALLENGE_RESPONSE, 0x00, 0x00,challengeResponse);
+			    r = c.transmit(a);
+				System.out.println(r);
+			
+				if (r.getSW()==WRONG_CHALLENGE_RESPONSE) {
+					System.out.println("Wrong Challenge Response");
+					return false;
+				} else {
+					System.out.println("Correct Challenge Response, Authenticated");
+					return true;
+				}
+			
+			
+			
+			
+			
+			
+		} catch (Base64DecodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return false;
+		
+	}
+	
+	
+	
+	
+	
+	
+	static public void authenticate(JSONObject req, String clientCommand){
+		CommandAPDU a;
+		ResponseAPDU r;
+		
+		try {
+			byte[] challenge = Base64.decode(clientCommand);
+			  
+			a = new CommandAPDU(IDENTITY_CARD_CLA, AUTHENTICATE_TO_SP, 0x00, 0x00,challenge);
+			    r = c.transmit(a);
+				System.out.println(r);
+				
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+	
+	
+	}
+	
 	
 }
 	

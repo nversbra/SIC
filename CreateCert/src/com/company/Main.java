@@ -22,18 +22,18 @@ public class Main {
 
 
             byte[] rmodu = rmod.toByteArray();
-            if (rmodu[0] == 0) {
-                byte[] tmp = new byte[rmodu.length - 1];
-                System.arraycopy(rmodu, 1, tmp, 0, tmp.length);
-                rmodu = tmp;
-            }
+            //if (rmodu[0] == 0) {
+            //    byte[] tmp = new byte[rmodu.length - 1];
+            //    System.arraycopy(rmodu, 1, tmp, 0, tmp.length);
+            //    rmodu = tmp;
+            //}
 
             byte[] rexpo = rexp.toByteArray();
-            if (rexpo[0] == 0) {
-                byte[] tmp = new byte[rexpo.length - 1];
-                System.arraycopy(rexpo, 1, tmp, 0, tmp.length);
-                rexpo = tmp;
-            }
+            //if (rexpo[0] == 0) {
+            //    byte[] tmp = new byte[rexpo.length - 1];
+            //    System.arraycopy(rexpo, 1, tmp, 0, tmp.length);
+            //    rexpo = tmp;
+            //}
 
 
             X509Certificate defa = (X509Certificate) getCertFromKeyStore();
