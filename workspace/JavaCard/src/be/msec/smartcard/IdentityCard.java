@@ -194,9 +194,9 @@ public class IdentityCard extends Applet {
 			defDATA(apdu);
 			break;
 		//placeholder for testing methods
-//		case GET_TS_DATA:
-//			TSDATA(apdu);
-//			break;
+		case GET_TS_DATA:
+			TSDATA(apdu);
+			break;
 			
 //		case GET_pubKey:
 //			getPubKeyINS(apdu);
@@ -263,30 +263,6 @@ public class IdentityCard extends Applet {
 //		else ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
 		else ISOException.throwIt(ISO7816.SW_WRONG_LENGTH);
 	}
-	
-//	//returns elements to generate pubKey at the client side
-//	private void getPubKeyINS(APDU apdu){
-//		byte[] buffer = apdu.getBuffer();
-//		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
-//		else{
-//			byte[] neo = new byte[4];
-//			short offset = 0;
-//			byte pktype = ((RSAPublicKey) pubKey).getType();
-//			short pksize = (short) ((RSAPublicKey) pubKey).getSize();
-//			short expLen = (short) ((RSAPublicKey) pubKey).getExponent(buffer, (short) (offset + 2));
-//		    short modLen = (short) ((RSAPublicKey) pubKey).getModulus(buffer, (short) (offset + 4 + expLen));
-//
-//		    neo[0] = pktype;
-//		    neo[1] = (byte) pksize;
-//		    neo[2] = (byte) expLen;
-//		    neo[3] = (byte) modLen;
-//		    
-//			apdu.setOutgoing();
-//			apdu.setOutgoingLength((short)4);
-//			apdu.sendBytesLong(neo,(short)0,(short)4);
-//		}
-//	}
-//	
 
 	private void getExponent(APDU apdu) {
 	    byte[] buffer = apdu.getBuffer();
@@ -338,8 +314,8 @@ public class IdentityCard extends Applet {
 		        //rand.generateData(nonce, (short)0, (short)nonce.length);
 		        //nonce = {'h','e','l','l','o'};
 				
-				byte[] alice = genNonceInstance((short)5);
-				byte[] bob = genNonceInstance((short)5);
+				byte[] alice = getSecureRand((short)5);
+				byte[] bob = getSecureRand((short)5);
 				
 				byte[] ab = concat(alice, bob);
 				
@@ -451,10 +427,18 @@ public class IdentityCard extends Applet {
 		}
 	}
 
-////timeStamp
-//	private void TSDATA(APDU apdu){
-//
-//	}
+//timeStamp
+	private void TSDATA(APDU apdu){
+		//If the pin is not validated, a response APDU with the
+		//'SW_PIN_VERIFICATION_REQUIRED' status word is transmitted.
+		if(!pin.isValidated())ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
+		else{
+			byte[] rg = getSecureRand((short)20);
+			apdu.setOutgoing();
+			apdu.setOutgoingLength((short)rg.length);
+			apdu.sendBytesLong(rg,(short)0,(short)rg.length);
+		}
+	}
 	
 //helper methods	
 //	generate RSAPub keys
@@ -468,15 +452,6 @@ public class IdentityCard extends Applet {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-	}
-	
-	//generate random array of size n, as nonce, an instance variable
-	private byte[] genNonceInstance(short n){
-		byte[] rn = new byte[n];
-//		RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
-		RandomData rand = RandomData.getInstance(RandomData.ALG_PSEUDO_RANDOM); //works in generating nonce size n
-		rand.generateData(rn, (short)0, (short)n);
-		return rn;
 	}
 
 	//concatenating two arrays in two steps, noting that current setup, ar1.length = 1
@@ -493,17 +468,22 @@ public class IdentityCard extends Applet {
 	}
 	
 	// for a 20 byte challenge
-	private byte[] getRand(){
-		byte[] buf = new byte[20];
-	    RandomData rand = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
-	    rand.generateData(buf, (short)0, (short)buf.length);
-	    
-//	    SecureRandom random = new SecureRandom();
-//	    byte[] values = new byte[20];
-//	    random.nextBytes(values);
-	    
-	    return buf;
+	private byte[] getSecureRand(short n){
+		SecureRandom random = new SecureRandom();
+	    byte[] values = new byte[n];
+	    random.nextBytes(values);
+	    return values;
 	}
+	
+	private byte[] getPseudoRand(short n){
+		byte[] buf = new byte[n];
+		RandomData rand = RandomData.getInstance(RandomData.ALG_PSEUDO_RANDOM);
+	    rand.generateData(buf, (short)0, (short)buf.length);
+		 return buf;
+	}
+	
+	
+	
 	
 //	maybe for later if we have the time
 //	//no need for now, hard coded in

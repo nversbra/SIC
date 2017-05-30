@@ -194,19 +194,19 @@ public class Client {
 //			System.out.println("pubKey size: : " + r.getNr());
 			
 ////TSDATA			
-//			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_TS_DATA, 0x00, 0x00); 
-//			r = c.transmit(a);
-//			
-//			byte[] d5 = r.getData();
-//			byte[] s5 = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
-//			//check padding of data bytes, what are the extra bytes?
-//			for(int i=6; i <d5.length; i++){
-//				s5[i-6] = (byte)d5[i];
-//			}
-//			System.out.println("TS Data instruction: ");
-//			System.out.println("length of NONCE data array: " + r.getNr());
-//			System.out.println("Nonce: " + Arrays.toString(s5));
-//			System.out.println("Nonce length getdata.length: " + r.getData().length);
+			a = new CommandAPDU(IDENTITY_CARD_CLA, GET_TS_DATA, 0x00, 0x00); 
+			r = c.transmit(a);
+			
+			byte[] dr = r.getData();
+			byte[] sr = new byte[r.getNr()-6]; //number of data bytes in the response body - 6 padding bytes
+			//check padding of data bytes, what are the extra bytes?
+			for(int i=6; i <dr.length; i++){
+				sr[i-6] = (byte)dr[i];
+			}
+			System.out.println("TS Data instruction: ");
+			System.out.println("length of RANDOM NUMBER data array: " + r.getNr());
+			System.out.println("RANDOM NUMBER: " + Arrays.toString(sr));
+			System.out.println("RANDOM NUMBER length getdata.length: " + r.getData().length);
 //			
 ////			System.out.print("TSDATA: ");
 ////			System.out.println(ty.length);
