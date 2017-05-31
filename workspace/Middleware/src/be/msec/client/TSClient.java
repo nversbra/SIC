@@ -20,7 +20,7 @@ public class TSClient {
 	            PublicKey TSkey = getPubKeyFromKeyStore();
 	            System.setProperty("javax.net.ssl.trustStore", "clientKS.jks");
 	            System.setProperty("javax.net.ssl.trustStorePassword", "SICKS");
-	            String strServerName = "mini"; // SSL Server Name
+	            String strServerName = "localhost"; 							// SSL Server Name, should be updated if using a different computer 
 	            int intSSLport = 4443; // Port where the SSL Server is listening
 	            DataOutputStream out = null;
 	            DataInputStream in = null;

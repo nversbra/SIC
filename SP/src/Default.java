@@ -87,7 +87,6 @@ public class Default extends HttpServlet {
 
         // System.out.println("cert: " +sCert);
         System.out.println(jo.toJSONString());
-        clientIp = "ubuntu";
         comm.sendCert(clientIp,jo.toJSONString());
 
 

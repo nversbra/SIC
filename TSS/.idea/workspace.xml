@@ -13,11 +13,11 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="TestClient.java" pinned="false" current-in-tab="true">
+      <file leaf-file-name="TestClient.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/com/company/TestClient.java">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="476">
-              <caret line="134" column="0" lean-forward="true" selection-start-line="134" selection-start-column="0" selection-end-line="134" selection-end-column="0" />
+              <caret line="134" column="0" lean-forward="false" selection-start-line="134" selection-start-column="0" selection-end-line="134" selection-end-column="0" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -35,11 +35,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="SSLServerThread.java" pinned="false" current-in-tab="false">
+      <file leaf-file-name="SSLServerThread.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/src/com/company/SSLServerThread.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="391">
-              <caret line="175" column="33" lean-forward="false" selection-start-line="175" selection-start-column="27" selection-end-line="175" selection-end-column="33" />
+            <state relative-caret-position="26">
+              <caret line="55" column="86" lean-forward="true" selection-start-line="55" selection-start-column="23" selection-end-line="55" selection-end-column="86" />
               <folding />
             </state>
           </provider>
@@ -55,8 +55,8 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/src/com/company/TestClient.java" />
         <option value="$PROJECT_DIR$/src/com/company/SSLServerThread.java" />
+        <option value="$PROJECT_DIR$/src/com/company/TestClient.java" />
       </list>
     </option>
   </component>
@@ -67,8 +67,8 @@
     <sorting>DEFINITION_ORDER</sorting>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="2543" />
-    <option name="y" value="240" />
+    <option name="x" value="336" />
+    <option name="y" value="19" />
     <option name="width" value="1956" />
     <option name="height" value="1196" />
   </component>
@@ -568,10 +568,10 @@
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="21668000" />
+    <option name="totallyTimeSpent" value="22872000" />
   </component>
   <component name="ToolWindowManager">
-    <frame x="2543" y="240" width="1956" height="1196" extended-state="0" />
+    <frame x="336" y="19" width="1956" height="1196" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="-1" side_tool="false" content_ui="tabs" />
@@ -664,6 +664,16 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/com/company/TestClient.java">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="476">
+          <caret line="134" column="0" lean-forward="false" selection-start-line="134" selection-start-column="0" selection-end-line="134" selection-end-column="0" />
+          <folding>
+            <element signature="imports" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/src/com/company/Main.java">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="26">
@@ -674,19 +684,9 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/com/company/SSLServerThread.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="391">
-          <caret line="175" column="33" lean-forward="false" selection-start-line="175" selection-start-column="27" selection-end-line="175" selection-end-column="33" />
+        <state relative-caret-position="26">
+          <caret line="55" column="86" lean-forward="true" selection-start-line="55" selection-start-column="23" selection-end-line="55" selection-end-column="86" />
           <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/com/company/TestClient.java">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="476">
-          <caret line="134" column="0" lean-forward="true" selection-start-line="134" selection-start-column="0" selection-end-line="134" selection-end-column="0" />
-          <folding>
-            <element signature="imports" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
